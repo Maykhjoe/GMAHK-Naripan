@@ -1,0 +1,3 @@
+import { Inbox } from "lucide-react";
+export function EmptyState({title="Belum ada data",description="Konten akan tampil setelah dipublikasikan."}:{title?:string;description?:string}){return <div className="rounded-2xl border border-dashed border-primary/20 p-12 text-center"><Inbox className="mx-auto size-9 text-gold"/><h3 className="mt-4 font-serif text-2xl text-primary">{title}</h3><p className="mt-2 text-sm text-muted">{description}</p></div>;}
+export function LoadingSkeleton(){return <div className="animate-pulse space-y-4"><div className="h-52 rounded-2xl bg-primary/8"/><div className="h-5 w-2/3 rounded bg-primary/8"/><div className="h-4 rounded bg-primary/8"/></div>;}

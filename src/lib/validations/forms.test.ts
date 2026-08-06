@@ -1,0 +1,32 @@
+import { describe, expect, it } from "vitest";
+import { contactSchema, eventRegistrationSchema, passwordResetSchema, prayerRequestSchema, visitorSchema } from "./forms";
+
+describe("validasi formulir publik", () => {
+  it("menolak permohonan doa tanpa persetujuan privasi", () => {
+    const result = prayerRequestSchema.safeParse({ name: "Maria", anonymous: false, category: "Kesehatan", request: "Mohon dukungan doa untuk pemulihan kesehatan.", mayContact: false, privacyConsent: false });
+    expect(result.success).toBe(false);
+  });
+
+  it("menerima rencana kunjungan yang valid", () => {
+    const result = visitorSchema.safeParse({ name: "Daniel", whatsapp: "081234567890", visitDate: "2026-08-08", peopleCount: 2, bringingChildren: true, notes: "Datang bersama keluarga." });
+    expect(result.success).toBe(true);
+  });
+
+  it("menolak pesan kontak yang terlalu pendek", () => {
+    expect(contactSchema.safeParse({ name: "Rina", email: "rina@example.com", subject: "Tanya", message: "Halo" }).success).toBe(false);
+  });
+
+  it("mewajibkan kata sandi kuat dan konfirmasi yang sama", () => {
+    expect(passwordResetSchema.safeParse({ password: "lemah123", confirmation: "lemah123" }).success).toBe(false);
+    expect(passwordResetSchema.safeParse({ password: "Kuat1234", confirmation: "Berbeda123" }).success).toBe(false);
+    expect(passwordResetSchema.safeParse({ password: "Kuat1234", confirmation: "Kuat1234" }).success).toBe(true);
+  });
+
+  it("mewajibkan kontak dan persetujuan pada registrasi kegiatan", () => {
+    const base = { eventSlug: "seminar-kesehatan-keluarga", name: "Rina Naripan", peopleCount: 2, notes: "", consent: true };
+    expect(eventRegistrationSchema.safeParse({ ...base, whatsapp: "081234567890", email: "" }).success).toBe(true);
+    expect(eventRegistrationSchema.safeParse({ ...base, whatsapp: "", email: "" }).success).toBe(false);
+    expect(eventRegistrationSchema.safeParse({ ...base, whatsapp: "081234567890", consent: false }).success).toBe(false);
+    expect(eventRegistrationSchema.safeParse({ ...base, whatsapp: "081234567890", peopleCount: 21 }).success).toBe(false);
+  });
+});

@@ -1,0 +1,7 @@
+import type { Metadata } from "next";
+import { LockKeyhole } from "lucide-react";
+import { PageHero } from "@/components/sections/page-hero";
+import { PrayerRequestForm } from "@/components/forms/public-forms";
+
+export const metadata: Metadata = { title: "Permohonan Doa", description: "Kirim permohonan doa secara privat kepada tim pastoral GMAHK Naripan.", robots: { index: false, follow: false } };
+export default function PrayerPage(){ return <><PageHero eyebrow="Kami Peduli" title="Bolehkah kami mendoakan Anda?" description="Anda tidak harus menjalani pergumulan seorang diri. Setiap permohonan dijaga dengan penuh kasih dan kerahasiaan." image="https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=1800&q=90" /><section className="section-pad bg-cream"><div className="container-site grid gap-10 lg:grid-cols-[.65fr_1.35fr]"><aside className="rounded-2xl bg-primary p-8 text-white lg:self-start"><LockKeyhole className="size-9 text-gold" /><h2 className="mt-6 font-serif text-3xl">Privat dan aman</h2><p className="mt-4 text-sm leading-7 text-white/65">Permohonan doa tidak pernah ditampilkan kepada publik. Akses dibatasi kepada tim pastoral sesuai peran dan dicatat dalam audit log.</p><div className="mt-7 border-t border-white/10 pt-6 text-xs leading-6 text-white/55">Jika Anda berada dalam situasi darurat, segera hubungi layanan darurat atau tenaga profesional terdekat.</div></aside><div className="rounded-2xl border border-primary/10 bg-white p-6 sm:p-10"><PrayerRequestForm /></div></div></section></>; }

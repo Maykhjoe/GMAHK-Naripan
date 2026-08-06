@@ -1,0 +1,113 @@
+{
+  "generatedAt": "2026-08-02T15:10:48.687Z",
+  "baseUrl": "http://127.0.0.1:3000",
+  "pageCount": 21,
+  "violationCount": 0,
+  "pages": [
+    {
+      "route": "/",
+      "url": "http://127.0.0.1:3000/",
+      "violations": []
+    },
+    {
+      "route": "/tentang",
+      "url": "http://127.0.0.1:3000/tentang",
+      "violations": []
+    },
+    {
+      "route": "/jadwal-ibadah",
+      "url": "http://127.0.0.1:3000/jadwal-ibadah",
+      "violations": []
+    },
+    {
+      "route": "/kegiatan",
+      "url": "http://127.0.0.1:3000/kegiatan",
+      "violations": []
+    },
+    {
+      "route": "/kegiatan/seminar-kesehatan-keluarga",
+      "url": "http://127.0.0.1:3000/kegiatan/seminar-kesehatan-keluarga",
+      "violations": []
+    },
+    {
+      "route": "/berita",
+      "url": "http://127.0.0.1:3000/berita",
+      "violations": []
+    },
+    {
+      "route": "/berita/melayani-dengan-hati",
+      "url": "http://127.0.0.1:3000/berita/melayani-dengan-hati",
+      "violations": []
+    },
+    {
+      "route": "/khotbah",
+      "url": "http://127.0.0.1:3000/khotbah",
+      "violations": []
+    },
+    {
+      "route": "/khotbah/iman-yang-bertumbuh",
+      "url": "http://127.0.0.1:3000/khotbah/iman-yang-bertumbuh",
+      "violations": []
+    },
+    {
+      "route": "/pelayanan",
+      "url": "http://127.0.0.1:3000/pelayanan",
+      "violations": []
+    },
+    {
+      "route": "/pelayanan/sekolah-sabat",
+      "url": "http://127.0.0.1:3000/pelayanan/sekolah-sabat",
+      "violations": []
+    },
+    {
+      "route": "/galeri",
+      "url": "http://127.0.0.1:3000/galeri",
+      "violations": []
+    },
+    {
+      "route": "/live",
+      "url": "http://127.0.0.1:3000/live",
+      "violations": []
+    },
+    {
+      "route": "/kontak",
+      "url": "http://127.0.0.1:3000/kontak",
+      "violations": []
+    },
+    {
+      "route": "/pengunjung-baru",
+      "url": "http://127.0.0.1:3000/pengunjung-baru",
+      "violations": []
+    },
+    {
+      "route": "/permohonan-doa",
+      "url": "http://127.0.0.1:3000/permohonan-doa",
+      "violations": []
+    },
+    {
+      "route": "/kebijakan-privasi",
+      "url": "http://127.0.0.1:3000/kebijakan-privasi",
+      "violations": []
+    },
+    {
+      "route": "/auth/login",
+      "url": "http://127.0.0.1:3000/auth/login",
+      "violations": []
+    },
+    {
+      "route": "/auth/forgot-password",
+      "url": "http://127.0.0.1:3000/auth/forgot-password",
+      "violations": []
+    },
+    {
+      "route": "/auth/reset-password",
+      "url": "http://127.0.0.1:3000/auth/reset-password",
+      "violations": []
+    },
+    {
+      "route": "/auth/unauthorized",
+      "url": "http://127.0.0.1:3000/auth/unauthorized",
+      "violations": []
+    }
+  ]
+}
