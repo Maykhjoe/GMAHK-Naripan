@@ -4,8 +4,18 @@ import { useState } from "react";
 import Image from "next/image";
 import { Play } from "lucide-react";
 
-export function YouTubeEmbed({ id, title }: { id: string; title: string }) {
+export function YouTubeEmbed({
+  id,
+  title,
+  thumbnailUrl,
+}: {
+  id: string;
+  title: string;
+  thumbnailUrl?: string;
+}) {
   const [activated, setActivated] = useState(false);
+  const preview =
+    thumbnailUrl || `https://i.ytimg.com/vi/${id}/maxresdefault.jpg`;
 
   return (
     <div className="relative aspect-video overflow-hidden rounded-2xl bg-black shadow-xl">
@@ -21,7 +31,7 @@ export function YouTubeEmbed({ id, title }: { id: string; title: string }) {
       ) : (
         <>
           <Image
-            src={`https://i.ytimg.com/vi/${id}/maxresdefault.jpg`}
+            src={preview}
             alt={`Pratinjau video ${title}`}
             fill
             className="object-cover"

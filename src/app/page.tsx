@@ -4,20 +4,20 @@ import { ArrowDown, ArrowRight, CalendarDays, ChevronRight, Clock3, HeartHandsha
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { EventCard, SermonCard, MinistryCard, ServiceScheduleCard, ArticleCard, GalleryCard } from "@/components/cards/content-cards";
 import { MotionDiv, MotionSection } from "@/components/motion/motion-section";
 import { SectionHeading } from "@/components/sections/section-heading";
-import { YouTubeEmbed } from "@/components/media/youtube-embed";
+import { LiveHomepageSection } from "@/components/live/live-homepage-section";
 import { galleryImages } from "@/lib/constants/site-data";
 import { regularWorshipScheduleCards } from "@/lib/constants/worship-schedules";
 import { getUpcomingEvents } from "@/lib/data/events";
 import { getPublishedPosts } from "@/lib/data/posts";
 import { getPublishedSermons } from "@/lib/data/sermons";
 import { getPublishedMinistries } from "@/lib/data/ministries";
+import { getLivestreamOverview } from "@/lib/data/livestreams";
 import { getUpcomingSpecialWorshipSchedules } from "@/lib/data/schedules";
 import { getSiteConfig } from "@/lib/data/site-settings";
-import { extractYouTubeVideoId, getWhatsappUrl } from "@/lib/site/config";
+import { getWhatsappUrl } from "@/lib/site/config";
 
 export const revalidate = 60;
 
@@ -29,6 +29,7 @@ export default async function Home() {
     latestPosts,
     featuredMinistries,
     upcomingSpecialSchedules,
+    livestream,
   ] = await Promise.all([
     getSiteConfig(),
     getUpcomingEvents(3),
@@ -36,9 +37,9 @@ export default async function Home() {
     getPublishedPosts(3),
     getPublishedMinistries(6),
     getUpcomingSpecialWorshipSchedules(1),
+    getLivestreamOverview(),
   ]);
 
-  const liveVideoId = extractYouTubeVideoId(site.liveUrl) || "ysz5S6PUM-U";
 
   const homepageSchedules = [
     ...regularWorshipScheduleCards.map((schedule) => ({
@@ -48,7 +49,7 @@ export default async function Home() {
     ...upcomingSpecialSchedules,
   ];
 
-  return <><Navbar overlay site={site} /><main>
+  return <><Navbar overlay site={site} isLive={livestream.isLive} /><main>
     <section className="relative isolate flex min-h-[760px] items-end overflow-hidden bg-primary text-white lg:min-h-screen">
       <Image src="https://images.unsplash.com/photo-1561448817-f17eed390089?q=80&w=1632&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Suasana hangat persekutuan gereja" fill priority className="-z-30 object-cover" sizes="100vw" />
       <div className="absolute inset-0 -z-20 bg-[linear-gradient(90deg,rgba(24,32,27,.96)_0%,rgba(38,53,43,.78)_48%,rgba(38,53,43,.35)_100%)]" />
@@ -64,7 +65,11 @@ export default async function Home() {
 
     <MotionSection className="section-pad bg-white"><div className="container-site"><div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between"><SectionHeading eyebrow="Mari Beribadah" title="Jadwal ibadah rutin" description="Ibadah Rabu, Vesper, dan Sabat berlangsung pada waktu yang tetap. Agenda khusus terdekat juga akan tampil di sini." /><Button asChild variant="secondary"><Link href="/jadwal-ibadah">Lihat semua jadwal <ArrowRight className="size-4" /></Link></Button></div><div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">{homepageSchedules.map(item => <ServiceScheduleCard key={item.id} item={item} />)}</div></div></MotionSection>
 
-    <MotionSection className="section-pad relative overflow-hidden bg-primary text-white"><div className="absolute -right-32 -top-32 size-96 rounded-full border border-gold/10" /><div className="container-site"><div className="grid items-end gap-8 lg:grid-cols-[1fr_auto]"><SectionHeading eyebrow="Live Streaming" title="Beribadah bersama, di mana pun Anda berada." description="Saksikan siaran langsung Kebaktian Sabat atau putar kembali rekaman terbaru." light /><Badge className="bg-red-500/15 text-red-300"><span className="mr-2 size-2 rounded-full bg-red-400 animate-pulse" />Live Berikutnya</Badge></div><div className="mt-12 grid gap-8 lg:grid-cols-[1.5fr_.8fr]"><YouTubeEmbed id={liveVideoId} title={`Live Streaming ${site.shortName}`} /><div className="flex flex-col justify-center rounded-2xl border border-white/10 bg-white/5 p-7"><p className="text-xs font-bold uppercase tracking-[.18em] text-gold">Kebaktian Sabat</p><h3 className="mt-4 font-serif text-3xl">Berakar dan Dibangun di Dalam Kristus</h3><p className="mt-4 text-sm text-white/60">Pembicara akan diumumkan<br />Sabtu, 08 Agustus 2026 · 09.00 WIB</p><div className="mt-8 grid grid-cols-4 gap-2 text-center">{[["05", "Hari"], ["12", "Jam"], ["36", "Menit"], ["48", "Detik"]].map(([n, l]) => <div key={l} className="rounded-xl bg-white/[.06] p-3"><b className="block font-serif text-2xl text-gold">{n}</b><span className="text-[9px] uppercase tracking-wider text-white/50">{l}</span></div>)}</div><Button asChild className="mt-8"><a href={site.liveUrl || site.youtube} target="_blank" rel="noreferrer"><Play className="size-4 fill-current" />Tonton di YouTube</a></Button></div></div></div></MotionSection>
+    <LiveHomepageSection
+      site={site}
+      overview={livestream}
+      fallbackSermon={latestSermons[0] ?? null}
+    />
 
     <MotionSection className="section-pad bg-cream"><div className="container-site"><div className="flex flex-col gap-7 lg:flex-row lg:items-end lg:justify-between"><SectionHeading eyebrow="Agenda Jemaat" title="Kegiatan mendatang" description="Mari bertumbuh, belajar, dan mengambil bagian dalam pelayanan bersama." /><Button asChild variant="secondary"><Link href="/kegiatan">Lihat Semua Kegiatan <ArrowRight className="size-4" /></Link></Button></div><div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {upcomingEvents.length > 0 ? (

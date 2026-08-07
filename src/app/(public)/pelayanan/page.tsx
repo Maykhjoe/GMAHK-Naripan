@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 
 import { MinistryCard } from "@/components/cards/content-cards";
+import { PublicContentFilters } from "@/components/content/public-content-filters";
 import { PageHero } from "@/components/sections/page-hero";
-import { getPublishedMinistries } from "@/lib/data/ministries";
+import { QueryPagination } from "@/components/ui/query-pagination";
+import { getPublishedMinistriesPage } from "@/lib/data/ministries";
+import { normalizeSearch, safePage } from "@/lib/data/pagination";
 
 export const metadata: Metadata = {
   title: "Pelayanan",
@@ -12,8 +15,22 @@ export const metadata: Metadata = {
 
 export const revalidate = 60;
 
-export default async function MinistriesPage() {
-  const ministries = await getPublishedMinistries();
+type SearchParams = Record<string, string | string[] | undefined>;
+
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function MinistriesPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const raw = await searchParams;
+  const query = normalizeSearch(firstValue(raw.q));
+  const page = safePage(firstValue(raw.page));
+  const result = await getPublishedMinistriesPage({ page, query });
+  const queryParams = { q: query || undefined };
 
   return (
     <>
@@ -25,23 +42,45 @@ export default async function MinistriesPage() {
 
       <section className="section-pad bg-cream">
         <div className="container-site">
-          {ministries.length > 0 ? (
-            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {ministries.map((item) => (
+          <PublicContentFilters
+            key={query}
+            query={query}
+            placeholder="Cari pelayanan, koordinator, program, atau jadwal…"
+          />
+
+          <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted" aria-live="polite">
+              <strong className="text-primary">{result.total}</strong> pelayanan
+              ditemukan
+            </p>
+            <p className="text-xs text-muted">
+              Halaman {result.page} dari {result.pageCount}
+            </p>
+          </div>
+
+          {result.items.length > 0 ? (
+            <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              {result.items.map((item) => (
                 <MinistryCard key={item.id} item={item} />
               ))}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-primary/20 bg-white p-12 text-center">
+            <div className="mt-8 rounded-2xl border border-dashed border-primary/20 bg-white p-12 text-center">
               <p className="font-serif text-2xl text-primary">
-                Belum ada pelayanan yang dipublikasikan
+                Pelayanan tidak ditemukan
               </p>
               <p className="mt-2 text-sm leading-6 text-muted">
-                Pelayanan yang diterbitkan melalui admin akan tampil otomatis
-                di halaman ini.
+                Coba nama, program, koordinator, atau kata kunci lain.
               </p>
             </div>
           )}
+
+          <QueryPagination
+            pathname="/pelayanan"
+            page={result.page}
+            pageCount={result.pageCount}
+            params={queryParams}
+          />
         </div>
       </section>
     </>

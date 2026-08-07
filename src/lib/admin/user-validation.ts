@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const adminRoleSchema = z.enum(["super_admin", "web_administrator", "secretariat", "media_team", "editor", "pastoral", "department_admin"]);
+export const adminRoleSchema = z.enum(["super_admin", "web_administrator", "secretariat", "media_team", "editor", "pastoral", "prayer_team", "department_admin"]);
 export const adminInviteSchema = z.object({
   email: z.email("Email tidak valid"),
   fullName: z.string().trim().min(2, "Nama minimal 2 karakter").max(100),

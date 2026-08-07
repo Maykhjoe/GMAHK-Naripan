@@ -1,10 +1,19 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 
-import { ContentBrowser } from "@/components/content/content-browser";
 import { EventCard } from "@/components/cards/content-cards";
+import { PublicContentFilters } from "@/components/content/public-content-filters";
 import { PageHero } from "@/components/sections/page-hero";
-import { getPublishedEvents } from "@/lib/data/events";
+import { QueryPagination } from "@/components/ui/query-pagination";
+import {
+  getEventFilterOptions,
+  getPublishedEventsPage,
+} from "@/lib/data/events";
+import {
+  normalizeChoice,
+  normalizeDateInput,
+  normalizeSearch,
+  safePage,
+} from "@/lib/data/pagination";
 
 export const metadata: Metadata = {
   title: "Kegiatan",
@@ -16,21 +25,42 @@ export const metadata: Metadata = {
 
 export const revalidate = 60;
 
-export default async function EventsPage() {
-  const events = await getPublishedEvents();
-  const upcomingEvents = events
-    .filter((event) => !event.isPast)
-    .sort(
-      (first, second) =>
-        new Date(first.startsAt).getTime() - new Date(second.startsAt).getTime(),
-    );
-  const pastEvents = events
-    .filter((event) => event.isPast)
-    .sort(
-      (first, second) =>
-        new Date(second.startsAt).getTime() - new Date(first.startsAt).getTime(),
-    )
-    .slice(0, 6);
+type SearchParams = Record<string, string | string[] | undefined>;
+
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function EventsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const raw = await searchParams;
+  const query = normalizeSearch(firstValue(raw.q));
+  const category = normalizeChoice(firstValue(raw.category));
+  const rawScope = normalizeChoice(firstValue(raw.scope));
+  const scope =
+    rawScope === "past" || rawScope === "all" ? rawScope : "upcoming";
+  const dateFrom = normalizeDateInput(firstValue(raw.dateFrom));
+  const dateTo = normalizeDateInput(firstValue(raw.dateTo));
+  const page = safePage(firstValue(raw.page));
+  const options = getEventFilterOptions();
+  const result = await getPublishedEventsPage({
+    page,
+    query,
+    category,
+    scope,
+    dateFrom,
+    dateTo,
+  });
+  const queryParams = {
+    q: query || undefined,
+    category: category || undefined,
+    scope: scope !== "upcoming" ? scope : undefined,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
+  };
 
   return (
     <>
@@ -42,40 +72,72 @@ export default async function EventsPage() {
 
       <section className="section-pad bg-cream">
         <div className="container-site">
-          <h2 className="mb-7 font-serif text-3xl text-primary">
-            Kegiatan mendatang
-          </h2>
+          <PublicContentFilters
+            key={`${query}-${category}-${scope}-${dateFrom}-${dateTo}`}
+            query={query}
+            placeholder="Cari kegiatan, lokasi, atau deskripsi…"
+            selects={[
+              {
+                name: "scope",
+                label: "Waktu kegiatan",
+                value: scope,
+                options: options.scopes,
+                defaultValue: "upcoming",
+              },
+              {
+                name: "category",
+                label: "Semua kategori",
+                value: category,
+                options: options.categories,
+              },
+            ]}
+            dates={[
+              {
+                name: "dateFrom",
+                label: "Mulai tanggal",
+                value: dateFrom,
+              },
+              {
+                name: "dateTo",
+                label: "Sampai tanggal",
+                value: dateTo,
+              },
+            ]}
+          />
 
-          {upcomingEvents.length > 0 ? (
-            <Suspense
-              fallback={
-                <div className="h-64 animate-pulse rounded-2xl bg-white" />
-              }
-            >
-              <ContentBrowser kind="events" items={upcomingEvents} />
-            </Suspense>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-primary/20 bg-white p-12 text-center text-sm text-muted">
-              Belum ada kegiatan mendatang yang dipublikasikan.
-            </div>
-          )}
+          <div className="mt-7 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted" aria-live="polite">
+              <strong className="text-primary">{result.total}</strong> kegiatan
+              ditemukan
+            </p>
+            <p className="text-xs text-muted">
+              Halaman {result.page} dari {result.pageCount}
+            </p>
+          </div>
 
-          <h2 className="mt-16 font-serif text-3xl text-primary">
-            Kegiatan selesai
-          </h2>
-
-          {pastEvents.length > 0 ? (
-            <div className="mt-7 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {pastEvents.map((event) => (
+          {result.items.length > 0 ? (
+            <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {result.items.map((event) => (
                 <EventCard key={event.id} item={event} />
               ))}
             </div>
           ) : (
-            <div className="mt-7 rounded-2xl border border-dashed border-primary/20 bg-white p-12 text-center text-sm text-muted">
-              Arsip kegiatan selesai akan tampil di sini setelah kegiatan
-              dipublikasikan melalui dashboard admin.
+            <div className="mt-8 rounded-2xl border border-dashed border-primary/20 bg-white p-12 text-center">
+              <p className="font-serif text-2xl text-primary">
+                Kegiatan tidak ditemukan
+              </p>
+              <p className="mt-2 text-sm leading-6 text-muted">
+                Ubah rentang tanggal, kategori, atau pilihan waktu kegiatan.
+              </p>
             </div>
           )}
+
+          <QueryPagination
+            pathname="/kegiatan"
+            page={result.page}
+            pageCount={result.pageCount}
+            params={queryParams}
+          />
         </div>
       </section>
     </>

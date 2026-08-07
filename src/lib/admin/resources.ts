@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { eventCategories } from "@/lib/constants/content-options";
 import { specialWorshipCategories } from "@/lib/constants/worship-schedules";
 import type { Permission } from "@/lib/permissions/rbac";
 
@@ -55,6 +56,8 @@ export type AdminResource = {
   createEnabled?: boolean;
   softDelete?: boolean;
   slugSource?: string;
+  searchColumn?: string;
+  categoryColumn?: string;
   fields: readonly AdminField[];
 };
 
@@ -164,6 +167,8 @@ export const adminResources: Record<string, AdminResource> = {
     dateColumn: "starts_at",
     softDelete: true,
     slugSource: "title",
+    searchColumn: "search_text",
+    categoryColumn: "category",
     fields: [
       {
         key: "title",
@@ -177,22 +182,7 @@ export const adminResources: Record<string, AdminResource> = {
         label: "Kategori",
         type: "select",
         required: true,
-        options: [
-          "Ibadah & Rohani",
-          "Kesehatan",
-          "Keluarga",
-          "Pemuda",
-          "Pemuda Advent",
-          "Pathfinder",
-          "Adventurer",
-          "Pelayanan Masyarakat",
-          "Musik",
-          "Anak",
-          "Wanita",
-          "Pengumuman Jemaat",
-          "Umum",
-          "Lainnya",
-        ],
+        options: eventCategories,
       },
       {
         key: "short_description",
@@ -296,6 +286,8 @@ export const adminResources: Record<string, AdminResource> = {
     dateColumn: "sermon_date",
     softDelete: true,
     slugSource: "title",
+    searchColumn: "search_text",
+    categoryColumn: "category_id",
     fields: [
       {
         key: "title",
@@ -390,36 +382,93 @@ export const adminResources: Record<string, AdminResource> = {
     table: "livestreams",
     permission: "livestreams.manage",
     title: "Live Streaming",
-    singular: "Live Streaming",
+    singular: "Siaran Live",
     titleColumn: "title",
     dateColumn: "starts_at",
     softDelete: true,
     fields: [
-      { key: "title", label: "Judul", type: "text", required: true },
-      { key: "theme", label: "Tema", type: "text" },
+      {
+        key: "title",
+        label: "Judul Siaran",
+        type: "text",
+        required: true,
+        placeholder: "Contoh: Kebaktian Sabat",
+      },
+      {
+        key: "theme",
+        label: "Tema / Judul Pesan",
+        type: "text",
+        placeholder: "Contoh: Berakar dan Dibangun di Dalam Kristus",
+      },
+      {
+        key: "speaker_name",
+        label: "Pembicara",
+        type: "text",
+        placeholder: "Contoh: Pdt. Nama Pembicara",
+      },
+      {
+        key: "scripture_reference",
+        label: "Ayat Utama",
+        type: "text",
+        placeholder: "Contoh: Kolose 2:6–7",
+      },
+      {
+        key: "youtube_id",
+        label: "Tautan YouTube",
+        type: "text",
+        required: true,
+        placeholder: "Tempel URL YouTube atau Video ID",
+        help: "Sistem akan mengambil Video ID secara otomatis.",
+      },
       {
         key: "starts_at",
         label: "Mulai",
         type: "datetime-local",
         required: true,
       },
-      { key: "ends_at", label: "Selesai", type: "datetime-local" },
       {
-        key: "youtube_id",
-        label: "Tautan YouTube",
-        type: "text",
-        placeholder: "Tempel URL YouTube atau Video ID",
+        key: "ends_at",
+        label: "Selesai",
+        type: "datetime-local",
+        help: "Jika dikosongkan, sistem memakai durasi default 3 jam.",
       },
-      { key: "zoom_url", label: "Tautan Zoom", type: "url" },
+      {
+        key: "thumbnail_url",
+        label: "URL Thumbnail",
+        type: "url",
+        hidden: true,
+      },
+      {
+        key: "thumbnail_id",
+        label: "Thumbnail / Poster Siaran",
+        type: "image",
+        uploadEndpoint: "/api/admin/live/thumbnail",
+        urlField: "thumbnail_url",
+        accept: "image/jpeg,image/png,image/webp",
+        help: "Opsional. JPG, PNG, atau WebP maksimal 5 MB.",
+      },
+      {
+        key: "zoom_url",
+        label: "Tautan Zoom",
+        type: "url",
+        placeholder: "https://zoom.us/...",
+      },
+      {
+        key: "offline_message",
+        label: "Pesan Ketika Offline",
+        type: "textarea",
+        placeholder:
+          "Contoh: Siaran belum dimulai. Silakan kembali sesuai jadwal.",
+      },
       {
         key: "live_status",
-        label: "Status Live",
+        label: "Status Siaran",
         type: "select",
         required: true,
         options: [
-          { value: "scheduled", label: "Terjadwal" },
-          { value: "live", label: "Sedang live" },
-          { value: "ended", label: "Selesai" },
+          { value: "scheduled", label: "Dijadwalkan" },
+          { value: "live", label: "Sedang Live" },
+          { value: "ended", label: "Selesai / Rekaman" },
           { value: "cancelled", label: "Dibatalkan" },
         ],
       },
@@ -438,6 +487,8 @@ export const adminResources: Record<string, AdminResource> = {
     dateColumn: "published_at",
     softDelete: true,
     slugSource: "title",
+    searchColumn: "search_text",
+    categoryColumn: "category_id",
     fields: [
       {
         key: "title",
@@ -509,6 +560,7 @@ export const adminResources: Record<string, AdminResource> = {
     dateColumn: "updated_at",
     softDelete: true,
     slugSource: "name",
+    searchColumn: "search_text",
     fields: [
       {
         key: "name",
@@ -633,20 +685,83 @@ export const adminResources: Record<string, AdminResource> = {
     section: "pengurus",
     table: "leaders",
     permission: "leaders.manage",
-    title: "Pengurus",
+    title: "Pengurus Gereja",
     singular: "Pengurus",
     titleColumn: "name",
     dateColumn: "updated_at",
     softDelete: true,
+    searchColumn: "search_text",
     fields: [
-      { key: "name", label: "Nama", type: "text", required: true },
-      { key: "position", label: "Jabatan", type: "text", required: true },
-      { key: "bio", label: "Biografi", type: "textarea" },
-      { key: "display_order", label: "Urutan Tampilan", type: "number" },
+      {
+        key: "name",
+        label: "Nama Lengkap",
+        type: "text",
+        required: true,
+        placeholder: "Contoh: Pdt. Nama Pendeta",
+      },
+      {
+        key: "position",
+        label: "Jabatan",
+        type: "text",
+        required: true,
+        placeholder: "Contoh: Pendeta Jemaat",
+      },
+      {
+        key: "period",
+        label: "Periode Pelayanan",
+        type: "text",
+        placeholder: "Contoh: 2026–2028",
+      },
+      {
+        key: "bio",
+        label: "Profil Singkat",
+        type: "textarea",
+        format: "paragraphs",
+        placeholder:
+          "Tuliskan tanggung jawab atau profil singkat pengurus ini.",
+      },
+      {
+        key: "phone",
+        label: "Nomor Kontak",
+        type: "text",
+        placeholder: "Contoh: 0812-3456-7890",
+        help: "Kosongkan bila nomor tidak boleh ditampilkan kepada publik.",
+      },
+      {
+        key: "email",
+        label: "Email",
+        type: "text",
+        placeholder: "nama@contoh.org",
+        help: "Kosongkan bila email tidak boleh ditampilkan kepada publik.",
+      },
+      {
+        key: "photo_url",
+        label: "URL Foto",
+        type: "url",
+        hidden: true,
+      },
+      {
+        key: "photo_id",
+        label: "Foto Pengurus",
+        type: "image",
+        uploadEndpoint: "/api/admin/pengurus/photo",
+        urlField: "photo_url",
+        accept: "image/jpeg,image/png,image/webp",
+        help: "Gunakan foto potret JPG, PNG, atau WebP. Maksimal 5 MB.",
+      },
+      {
+        key: "display_order",
+        label: "Urutan Tampilan",
+        type: "number",
+        defaultValue: 0,
+        placeholder: "0",
+        help: "Angka yang lebih kecil akan tampil lebih dahulu.",
+      },
       {
         key: "is_public",
         label: "Tampilkan ke publik",
         type: "checkbox",
+        defaultValue: true,
       },
       contentFields.status,
     ],

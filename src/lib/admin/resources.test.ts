@@ -20,10 +20,19 @@ describe("admin resource registry", () => {
       table: "sermons",
       permission: "sermons.manage",
     });
+    expect(getAdminResource("live")).toMatchObject({
+      table: "livestreams",
+      permission: "livestreams.manage",
+    });
     expect(getAdminResource("berita")).toMatchObject({
       table: "posts",
       permission: "posts.manage",
       slugSource: "title",
+    });
+    expect(getAdminResource("pengurus")).toMatchObject({
+      table: "leaders",
+      permission: "leaders.manage",
+      title: "Pengurus Gereja",
     });
     expect(getAdminResource("permohonan-doa")).toMatchObject({
       table: "prayer_requests",
@@ -254,4 +263,38 @@ describe("admin resource registry", () => {
     });
   });
 
+  it("accepts public leader profile fields and an uploaded photo", () => {
+    const photoId = "66666666-6666-4666-8666-666666666666";
+
+    const parsed = parseResourcePayload(
+      "pengurus",
+      {
+        name: "Pdt. Contoh",
+        position: "Pendeta Jemaat",
+        period: "2026–2028",
+        bio: "Melayani penggembalaan dan pengajaran jemaat.",
+        phone: "0812-3456-7890",
+        email: "pendeta@example.org",
+        photo_id: photoId,
+        photo_url: "https://example.supabase.co/storage/v1/object/public/public-media/pengurus.webp",
+        display_order: "1",
+        is_public: true,
+        status: "published",
+      },
+      false,
+    );
+
+    expect(parsed).toMatchObject({
+      success: true,
+      data: {
+        name: "Pdt. Contoh",
+        position: "Pendeta Jemaat",
+        period: "2026–2028",
+        photo_id: photoId,
+        display_order: 1,
+        is_public: true,
+        status: "published",
+      },
+    });
+  });
 });

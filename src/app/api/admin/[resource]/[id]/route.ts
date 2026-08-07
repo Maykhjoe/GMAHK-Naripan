@@ -57,6 +57,69 @@ async function context(
   return { section, id, resource, auth };
 }
 
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ resource: string; id: string }> },
+) {
+  const { resource: section, id } = await params;
+  const resource = getAdminResource(section);
+
+  if (!resource) {
+    return NextResponse.json(
+      { message: "Resource tidak ditemukan" },
+      { status: 404 },
+    );
+  }
+
+  if (!uuidSchema.safeParse(id).success) {
+    return NextResponse.json(
+      { message: "ID tidak valid" },
+      { status: 400 },
+    );
+  }
+
+  const auth = await requireAdminPermission(resource.permission);
+
+  if (isAuthorizationFailure(auth)) {
+    return auth;
+  }
+
+  let query = auth.supabase
+    .from(resource.table)
+    .select("*")
+    .eq("id", id);
+
+  if (resource.softDelete) {
+    query = query.is("deleted_at", null);
+  }
+
+  const { data, error } = await query.maybeSingle();
+
+  if (error) {
+    console.error(`[admin:${section}] detail failed`, {
+      table: resource.table,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+
+    return NextResponse.json(
+      { message: "Detail data tidak dapat dimuat" },
+      { status: 500 },
+    );
+  }
+
+  if (!data) {
+    return NextResponse.json(
+      { message: "Data tidak ditemukan atau tidak dapat diakses" },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json({ data });
+}
+
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ resource: string; id: string }> },
@@ -143,7 +206,15 @@ export async function PATCH(
     );
   }
 
-  if (payload.status === "published" && !payload.published_at) {
+  const supportsPublishedAt = ctx.resource.fields.some(
+    (field) => field.key === "published_at",
+  );
+
+  if (
+    supportsPublishedAt &&
+    payload.status === "published" &&
+    !payload.published_at
+  ) {
     payload.published_at = new Date().toISOString();
   }
 
@@ -155,6 +226,14 @@ export async function PATCH(
     .single();
 
   if (error) {
+    console.error(`[admin:${ctx.section}] update failed`, {
+      table: ctx.resource.table,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+
     return NextResponse.json(
       { message: "Data tidak dapat diperbarui" },
       { status: 500 },

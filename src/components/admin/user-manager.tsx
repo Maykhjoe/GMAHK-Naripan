@@ -5,7 +5,7 @@ import { Loader2, MailPlus, RefreshCw, Save, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const roles = [["super_admin", "Super Admin"], ["web_administrator", "Web Administrator"], ["secretariat", "Sekretariat"], ["media_team", "Tim Media"], ["editor", "Editor"], ["pastoral", "Pastoral"], ["department_admin", "Admin Departemen"]] as const;
+const roles = [["super_admin", "Super Admin"], ["web_administrator", "Web Administrator"], ["secretariat", "Sekretariat"], ["media_team", "Tim Media"], ["editor", "Editor"], ["pastoral", "Pastoral"], ["prayer_team", "Tim Doa"], ["department_admin", "Admin Departemen"]] as const;
 type UserRow = { id: string; email: string; fullName: string; status: string; role: string | null; roleName: string | null; invitedAt: string | null; lastSignInAt: string | null; createdAt: string };
 export function UserManager() {
   const [users, setUsers] = useState<UserRow[]>([]);

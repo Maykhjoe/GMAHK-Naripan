@@ -1,0 +1,16 @@
+export const eventCategories = [
+  "Ibadah & Rohani",
+  "Kesehatan",
+  "Keluarga",
+  "Pemuda",
+  "Pemuda Advent",
+  "Pathfinder",
+  "Adventurer",
+  "Pelayanan Masyarakat",
+  "Musik",
+  "Anak",
+  "Wanita",
+  "Pengumuman Jemaat",
+  "Umum",
+  "Lainnya",
+] as const;

@@ -1,6 +1,18 @@
 import "server-only";
 
 import { sermons as fallbackSermons } from "@/lib/constants/site-data";
+import {
+  createPagination,
+  fallbackPagination,
+  normalizeChoice,
+  normalizeSearch,
+  recentYearOptions,
+  safePage,
+  safePageSize,
+  type PaginatedResult,
+  type PublicPageFilters,
+  type SelectOption,
+} from "@/lib/data/pagination";
 import { createPublicClient } from "@/lib/supabase/public";
 import type { Sermon } from "@/types/content";
 
@@ -243,4 +255,194 @@ export async function getRelatedSermons(
   );
 
   return [...sameCategory, ...remaining].slice(0, limit);
+}
+
+
+export async function getSermonFilterOptions(): Promise<{
+  categories: SelectOption[];
+  speakers: SelectOption[];
+  years: SelectOption[];
+}> {
+  const supabase = createPublicClient();
+  const fallbackSpeakers = [...new Set(fallbackSermons.map((item) => item.speaker))]
+    .sort((first, second) => first.localeCompare(second, "id-ID"))
+    .map((label) => ({ value: label, label }));
+
+  if (!supabase) {
+    const categories = [
+      ...new Set(fallbackSermons.map((item) => item.category)),
+    ]
+      .sort((first, second) => first.localeCompare(second, "id-ID"))
+      .map((label) => ({ value: label, label }));
+
+    return {
+      categories,
+      speakers: fallbackSpeakers,
+      years: recentYearOptions(),
+    };
+  }
+
+  const [categoryResult, speakerResult] = await Promise.all([
+    supabase
+      .from("sermon_categories")
+      .select("slug, name")
+      .eq("status", "active")
+      .order("name", { ascending: true }),
+    supabase.rpc("public_sermon_speaker_options"),
+  ]);
+
+  if (categoryResult.error) {
+    console.error(
+      "Kategori khotbah tidak dapat dimuat:",
+      categoryResult.error.message,
+    );
+  }
+
+  if (speakerResult.error) {
+    console.error(
+      "Daftar pembicara khotbah tidak dapat dimuat:",
+      speakerResult.error.message,
+    );
+  }
+
+  const speakers = speakerResult.error
+    ? fallbackSpeakers
+    : ((speakerResult.data ?? []) as { value: string }[]).map((item) => ({
+        value: item.value,
+        label: item.value,
+      }));
+
+  return {
+    categories: (categoryResult.data ?? []).map((item) => ({
+      value: item.slug,
+      label: item.name,
+    })),
+    speakers,
+    years: recentYearOptions(),
+  };
+}
+
+export async function getPublishedSermonsPage(
+  filters: PublicPageFilters,
+): Promise<PaginatedResult<PublicSermon>> {
+  const page = safePage(filters.page);
+  const pageSize = safePageSize(filters.pageSize, 9, [9]);
+  const queryText = normalizeSearch(filters.query);
+  const category = normalizeChoice(filters.category);
+  const speaker = normalizeChoice(filters.speaker);
+  const year = normalizeChoice(filters.year, 4);
+  const fallback = fallbackPublishedSermons();
+
+  function fallbackResult() {
+    const normalizedQuery = queryText.toLocaleLowerCase("id-ID");
+    const filtered = fallback.filter((sermon) => {
+      const haystack = [
+        sermon.title,
+        sermon.speaker,
+        sermon.category,
+        sermon.verse,
+        sermon.description,
+      ]
+        .join(" ")
+        .toLocaleLowerCase("id-ID");
+
+      if (normalizedQuery && !haystack.includes(normalizedQuery)) {
+        return false;
+      }
+
+      if (
+        category &&
+        sermon.category.toLocaleLowerCase("id-ID") !==
+          category.toLocaleLowerCase("id-ID")
+      ) {
+        return false;
+      }
+
+      if (speaker && sermon.speaker !== speaker) {
+        return false;
+      }
+
+      if (year && !sermon.date.includes(year)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    return fallbackPagination(filtered, page, pageSize);
+  }
+
+  const supabase = createPublicClient();
+
+  if (!supabase) {
+    return fallbackResult();
+  }
+
+  let categoryId: string | null = null;
+
+  if (category) {
+    const { data: categoryRow, error: categoryError } = await supabase
+      .from("sermon_categories")
+      .select("id")
+      .eq("slug", category)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (categoryError) {
+      console.error(
+        "Filter kategori khotbah gagal dimuat:",
+        categoryError.message,
+      );
+      return fallbackResult();
+    }
+
+    if (!categoryRow) {
+      return createPagination([], 0, page, pageSize);
+    }
+
+    categoryId = categoryRow.id;
+  }
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  let databaseQuery = supabase
+    .from("sermons")
+    .select(sermonSelect, { count: "exact" })
+    .eq("status", "published")
+    .is("deleted_at", null)
+    .lte("published_at", new Date().toISOString());
+
+  if (queryText) {
+    databaseQuery = databaseQuery.ilike("search_text", `%${queryText}%`);
+  }
+
+  if (categoryId) {
+    databaseQuery = databaseQuery.eq("category_id", categoryId);
+  }
+
+  if (speaker) {
+    databaseQuery = databaseQuery.contains("seo", { speaker });
+  }
+
+  if (/^\d{4}$/.test(year)) {
+    databaseQuery = databaseQuery
+      .gte("sermon_date", `${year}-01-01`)
+      .lt("sermon_date", `${Number(year) + 1}-01-01`);
+  }
+
+  const { data, error, count } = await databaseQuery
+    .order("sermon_date", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    console.error("Daftar khotbah tidak dapat dimuat:", error.message);
+    return fallbackResult();
+  }
+
+  return createPagination(
+    (data as unknown as SermonRow[]).map(mapDatabaseSermon),
+    count ?? 0,
+    page,
+    pageSize,
+  );
 }

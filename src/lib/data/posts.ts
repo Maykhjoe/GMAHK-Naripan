@@ -1,6 +1,18 @@
 import "server-only";
 
 import { posts as fallbackPosts } from "@/lib/constants/site-data";
+import {
+  createPagination,
+  fallbackPagination,
+  normalizeChoice,
+  normalizeSearch,
+  recentYearOptions,
+  safePage,
+  safePageSize,
+  type PaginatedResult,
+  type PublicPageFilters,
+  type SelectOption,
+} from "@/lib/data/pagination";
 import { createPublicClient } from "@/lib/supabase/public";
 import type { Post } from "@/types/content";
 
@@ -251,4 +263,159 @@ export async function getPublishedPostBySlug(
   }
 
   return data ? mapDatabasePost(data as PostRow) : null;
+}
+
+
+export async function getPostFilterOptions(): Promise<{
+  categories: SelectOption[];
+  years: SelectOption[];
+}> {
+  const supabase = createPublicClient();
+
+  if (!supabase) {
+    const categories = [...new Set(fallbackPosts.map((post) => post.category))]
+      .sort((first, second) => first.localeCompare(second, "id-ID"))
+      .map((label) => ({ value: label, label }));
+
+    return { categories, years: recentYearOptions() };
+  }
+
+  const { data, error } = await supabase
+    .from("post_categories")
+    .select("slug, name")
+    .eq("status", "active")
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("Kategori artikel tidak dapat dimuat:", error.message);
+    return { categories: [], years: recentYearOptions() };
+  }
+
+  return {
+    categories: (data ?? []).map((item) => ({
+      value: item.slug,
+      label: item.name,
+    })),
+    years: recentYearOptions(),
+  };
+}
+
+export async function getPublishedPostsPage(
+  filters: PublicPageFilters,
+): Promise<PaginatedResult<PublicPost>> {
+  const page = safePage(filters.page);
+  const pageSize = safePageSize(filters.pageSize, 9, [9]);
+  const queryText = normalizeSearch(filters.query);
+  const category = normalizeChoice(filters.category);
+  const year = normalizeChoice(filters.year, 4);
+  const fallback = fallbackPostsWithLimit();
+
+  function fallbackResult() {
+    const normalizedQuery = queryText.toLocaleLowerCase("id-ID");
+    const filtered = fallback.filter((post) => {
+      const haystack = [
+        post.title,
+        post.excerpt,
+        post.author,
+        post.category,
+        post.content.join(" "),
+      ]
+        .join(" ")
+        .toLocaleLowerCase("id-ID");
+
+      if (normalizedQuery && !haystack.includes(normalizedQuery)) {
+        return false;
+      }
+
+      if (
+        category &&
+        post.category.toLocaleLowerCase("id-ID") !==
+          category.toLocaleLowerCase("id-ID")
+      ) {
+        return false;
+      }
+
+      if (year && !post.date.includes(year)) {
+        return false;
+      }
+
+      return true;
+    });
+
+    return fallbackPagination(filtered, page, pageSize);
+  }
+
+  const supabase = createPublicClient();
+
+  if (!supabase) {
+    return fallbackResult();
+  }
+
+  let categoryId: string | null = null;
+
+  if (category) {
+    const { data: categoryRow, error: categoryError } = await supabase
+      .from("post_categories")
+      .select("id")
+      .eq("slug", category)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (categoryError) {
+      console.error("Filter kategori artikel gagal dimuat:", categoryError.message);
+      return fallbackResult();
+    }
+
+    if (!categoryRow) {
+      return createPagination([], 0, page, pageSize);
+    }
+
+    categoryId = categoryRow.id;
+  }
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  let databaseQuery = supabase
+    .from("posts")
+    .select(
+      "id, slug, title, excerpt, content, reading_minutes, seo, published_at, created_at, updated_at, category:post_categories(name)",
+      { count: "exact" },
+    )
+    .eq("status", "published")
+    .is("deleted_at", null)
+    .lte("published_at", new Date().toISOString());
+
+  if (queryText) {
+    databaseQuery = databaseQuery.ilike("search_text", `%${queryText}%`);
+  }
+
+  if (categoryId) {
+    databaseQuery = databaseQuery.eq("category_id", categoryId);
+  }
+
+  if (/^\d{4}$/.test(year)) {
+    databaseQuery = databaseQuery
+      .gte("published_at", `${year}-01-01T00:00:00+07:00`)
+      .lt(
+        "published_at",
+        `${Number(year) + 1}-01-01T00:00:00+07:00`,
+      );
+  }
+
+  const { data, error, count } = await databaseQuery
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    console.error("Daftar artikel tidak dapat dimuat:", error.message);
+    return fallbackResult();
+  }
+
+  return createPagination(
+    (data as PostRow[]).map(mapDatabasePost),
+    count ?? 0,
+    page,
+    pageSize,
+  );
 }

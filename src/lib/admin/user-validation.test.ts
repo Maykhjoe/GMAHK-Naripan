@@ -10,6 +10,7 @@ describe("admin user validation", () => {
   });
   it("only accepts explicit user status values", () => {
     expect(adminUserUpdateSchema.safeParse({ status: "inactive", role: "pastoral" }).success).toBe(true);
+    expect(adminUserUpdateSchema.safeParse({ role: "prayer_team" }).success).toBe(true);
     expect(adminUserUpdateSchema.safeParse({ status: "deleted" }).success).toBe(false);
   });
 });

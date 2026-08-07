@@ -251,4 +251,27 @@ describe("resource payload preparation", () => {
     expect(payload).not.toHaveProperty("thumbnail_url");
   });
 
+  it("normalizes livestream YouTube input and keeps uploaded thumbnail data", () => {
+    const resource = getAdminResource("live");
+    expect(resource).not.toBeNull();
+
+    const payload = prepareResourcePayload(
+      "live",
+      resource!,
+      {
+        title: "Kebaktian Sabat",
+        youtube_id: "https://www.youtube.com/live/dQw4w9WgXcQ",
+        thumbnail_id: "44444444-4444-4444-8444-444444444444",
+        thumbnail_url: "https://example.com/live.webp",
+      },
+      "create",
+    );
+
+    expect(payload).toMatchObject({
+      youtube_id: "dQw4w9WgXcQ",
+      thumbnail_id: "44444444-4444-4444-8444-444444444444",
+      thumbnail_url: "https://example.com/live.webp",
+    });
+  });
+
 });

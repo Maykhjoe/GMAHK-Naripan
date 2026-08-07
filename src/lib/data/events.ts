@@ -1,6 +1,21 @@
 import "server-only";
 
+import { eventCategories } from "@/lib/constants/content-options";
 import { events as fallbackEvents } from "@/lib/constants/site-data";
+import {
+  createPagination,
+  fallbackPagination,
+  jakartaDayEnd,
+  jakartaDayStart,
+  normalizeChoice,
+  normalizeDateInput,
+  normalizeSearch,
+  safePage,
+  safePageSize,
+  type PaginatedResult,
+  type PublicPageFilters,
+  type SelectOption,
+} from "@/lib/data/pagination";
 import { createPublicClient } from "@/lib/supabase/public";
 import type { EventItem } from "@/types/content";
 
@@ -341,4 +356,150 @@ export async function getPublishedEventBySlug(
   }
 
   return data ? mapDatabaseEvent(data as EventRow) : null;
+}
+
+
+export function getEventFilterOptions(): {
+  categories: SelectOption[];
+  scopes: SelectOption[];
+} {
+  return {
+    categories: eventCategories.map((category) => ({
+      value: category,
+      label: category,
+    })),
+    scopes: [
+      { value: "upcoming", label: "Kegiatan mendatang" },
+      { value: "past", label: "Kegiatan selesai" },
+      { value: "all", label: "Semua kegiatan" },
+    ],
+  };
+}
+
+export async function getPublishedEventsPage(
+  filters: PublicPageFilters,
+): Promise<PaginatedResult<PublicEvent>> {
+  const page = safePage(filters.page);
+  const pageSize = safePageSize(filters.pageSize, 9, [9]);
+  const queryText = normalizeSearch(filters.query);
+  const category = normalizeChoice(filters.category);
+  const scope =
+    filters.scope === "past" || filters.scope === "all"
+      ? filters.scope
+      : "upcoming";
+  const dateFrom = normalizeDateInput(filters.dateFrom);
+  const dateTo = normalizeDateInput(filters.dateTo);
+
+  function fallbackResult() {
+    const normalizedQuery = queryText.toLocaleLowerCase("id-ID");
+    const now = Date.now();
+    const filtered = fallbackPublishedEvents()
+      .filter((event) => {
+        const startsAt = new Date(event.startsAt).getTime();
+        const haystack = [
+          event.title,
+          event.category,
+          event.description,
+          event.location,
+          event.details.join(" "),
+        ]
+          .join(" ")
+          .toLocaleLowerCase("id-ID");
+
+        if (normalizedQuery && !haystack.includes(normalizedQuery)) {
+          return false;
+        }
+
+        if (category && event.category !== category) {
+          return false;
+        }
+
+        if (scope === "upcoming" && startsAt < now) {
+          return false;
+        }
+
+        if (scope === "past" && startsAt >= now) {
+          return false;
+        }
+
+        if (
+          dateFrom &&
+          startsAt < new Date(jakartaDayStart(dateFrom)).getTime()
+        ) {
+          return false;
+        }
+
+        if (dateTo && startsAt > new Date(jakartaDayEnd(dateTo)).getTime()) {
+          return false;
+        }
+
+        return true;
+      })
+      .sort((first, second) => {
+        const firstDate = new Date(first.startsAt).getTime();
+        const secondDate = new Date(second.startsAt).getTime();
+        return scope === "upcoming"
+          ? firstDate - secondDate
+          : secondDate - firstDate;
+      });
+
+    return fallbackPagination(filtered, page, pageSize);
+  }
+
+  const supabase = createPublicClient();
+
+  if (!supabase) {
+    return fallbackResult();
+  }
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const now = new Date().toISOString();
+  let databaseQuery = supabase
+    .from("events")
+    .select(
+      "id, slug, title, category, short_description, description, starts_at, ends_at, location, rundown, zoom_url, youtube_url, registration_enabled, capacity, registration_deadline, seo, published_at, created_at, updated_at",
+      { count: "exact" },
+    )
+    .eq("status", "published")
+    .is("deleted_at", null)
+    .lte("published_at", now);
+
+  if (queryText) {
+    databaseQuery = databaseQuery.ilike("search_text", `%${queryText}%`);
+  }
+
+  if (category) {
+    databaseQuery = databaseQuery.eq("category", category);
+  }
+
+  if (scope === "upcoming") {
+    databaseQuery = databaseQuery.gte("starts_at", now);
+  } else if (scope === "past") {
+    databaseQuery = databaseQuery.lt("starts_at", now);
+  }
+
+  if (dateFrom) {
+    databaseQuery = databaseQuery.gte("starts_at", jakartaDayStart(dateFrom));
+  }
+
+  if (dateTo) {
+    databaseQuery = databaseQuery.lte("starts_at", jakartaDayEnd(dateTo));
+  }
+
+  const { data, error, count } = await databaseQuery
+    .order("starts_at", { ascending: scope === "upcoming" })
+    .range(from, to);
+
+  if (error) {
+    console.error("Daftar kegiatan tidak dapat dimuat:", error.message);
+    return fallbackResult();
+  }
+
+  return createPagination(
+    (data as EventRow[]).map(mapDatabaseEvent),
+    count ?? 0,
+    page,
+    pageSize,
+  );
 }

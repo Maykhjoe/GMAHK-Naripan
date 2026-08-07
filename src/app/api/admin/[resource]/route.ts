@@ -80,12 +80,15 @@ export async function GET(
 
   const url = new URL(request.url);
   const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
-  const pageSize = Math.min(
-    100,
-    Math.max(10, Number(url.searchParams.get("pageSize")) || 20),
-  );
-  const search = url.searchParams.get("search")?.trim();
+  const requestedPageSize = Number(url.searchParams.get("pageSize"));
+  const pageSize = [10, 20, 50].includes(requestedPageSize)
+    ? requestedPageSize
+    : 20;
+  const search = url.searchParams.get("search")?.trim().slice(0, 120);
   const status = url.searchParams.get("status")?.trim();
+  const category = url.searchParams.get("category")?.trim();
+  const dateFrom = url.searchParams.get("dateFrom")?.trim();
+  const dateTo = url.searchParams.get("dateTo")?.trim();
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
@@ -99,13 +102,41 @@ export async function GET(
 
   if (search) {
     query = query.ilike(
-      resource.titleColumn,
-      `%${search.replaceAll("%", "\\%").replaceAll("_", "\\_")}%`,
+      resource.searchColumn ?? resource.titleColumn,
+      `%${search}%`,
     );
   }
 
   if (status) {
     query = query.eq("status", status);
+  }
+
+  if (category && resource.categoryColumn) {
+    query = query.eq(resource.categoryColumn, category);
+  }
+
+  if (resource.dateColumn && /^\d{4}-\d{2}-\d{2}$/.test(dateFrom ?? "")) {
+    const dateField = resource.fields.find(
+      (field) => field.key === resource.dateColumn,
+    );
+    query = query.gte(
+      resource.dateColumn,
+      dateField?.type === "date"
+        ? dateFrom!
+        : `${dateFrom}T00:00:00+07:00`,
+    );
+  }
+
+  if (resource.dateColumn && /^\d{4}-\d{2}-\d{2}$/.test(dateTo ?? "")) {
+    const dateField = resource.fields.find(
+      (field) => field.key === resource.dateColumn,
+    );
+    query = query.lte(
+      resource.dateColumn,
+      dateField?.type === "date"
+        ? dateTo!
+        : `${dateTo}T23:59:59.999+07:00`,
+    );
   }
 
   if (section === "jadwal") {
@@ -119,6 +150,14 @@ export async function GET(
   const { data, error, count } = await query;
 
   if (error) {
+    console.error(`[admin:${section}] list failed`, {
+      table: resource.table,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+
     return NextResponse.json(
       { message: "Data tidak dapat dimuat" },
       { status: 500 },
@@ -230,7 +269,15 @@ export async function POST(
     payload.created_by = auth.user.id;
   }
 
-  if (payload.status === "published" && !payload.published_at) {
+  const supportsPublishedAt = resource.fields.some(
+    (field) => field.key === "published_at",
+  );
+
+  if (
+    supportsPublishedAt &&
+    payload.status === "published" &&
+    !payload.published_at
+  ) {
     payload.published_at = new Date().toISOString();
   }
 
@@ -241,6 +288,14 @@ export async function POST(
     .single();
 
   if (error) {
+    console.error(`[admin:${section}] create failed`, {
+      table: resource.table,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+
     return NextResponse.json(
       { message: "Data tidak dapat dibuat" },
       { status: 500 },

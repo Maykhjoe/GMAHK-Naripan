@@ -1,6 +1,15 @@
 import "server-only";
 
 import { allMinistries as fallbackMinistries } from "@/lib/constants/site-data";
+import {
+  createPagination,
+  fallbackPagination,
+  normalizeSearch,
+  safePage,
+  safePageSize,
+  type PaginatedResult,
+  type PublicPageFilters,
+} from "@/lib/data/pagination";
 import { createPublicClient } from "@/lib/supabase/public";
 import type { Ministry } from "@/types/content";
 
@@ -267,4 +276,78 @@ export async function getPublishedMinistryBySlug(
         fallbackMinistries.findIndex((item) => item.slug === slug),
       )
     : null;
+}
+
+
+export async function getPublishedMinistriesPage(
+  filters: PublicPageFilters,
+): Promise<PaginatedResult<PublicMinistry>> {
+  const page = safePage(filters.page);
+  const pageSize = safePageSize(filters.pageSize, 9, [9]);
+  const queryText = normalizeSearch(filters.query);
+  const fallback = fallbackPublishedMinistries();
+
+  function fallbackResult() {
+    const normalizedQuery = queryText.toLocaleLowerCase("id-ID");
+    const filtered = fallback.filter((ministry) => {
+      const haystack = [
+        ministry.name,
+        ministry.shortName,
+        ministry.shortDescription,
+        ministry.details.join(" "),
+        ministry.coordinator,
+        ministry.contact,
+        ministry.email,
+        ministry.schedule,
+        ministry.location,
+        ministry.programs.join(" "),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("id-ID");
+
+      return !normalizedQuery || haystack.includes(normalizedQuery);
+    });
+
+    return fallbackPagination(filtered, page, pageSize);
+  }
+
+  const supabase = createPublicClient();
+
+  if (!supabase) {
+    return fallbackResult();
+  }
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  let databaseQuery = supabase
+    .from("ministries")
+    .select(
+      "id, slug, name, short_description, description, contact, programs, seo, display_order, published_at, created_at, updated_at",
+      { count: "exact" },
+    )
+    .eq("status", "published")
+    .is("deleted_at", null)
+    .lte("published_at", new Date().toISOString());
+
+  if (queryText) {
+    databaseQuery = databaseQuery.ilike("search_text", `%${queryText}%`);
+  }
+
+  const { data, error, count } = await databaseQuery
+    .order("display_order", { ascending: true })
+    .order("name", { ascending: true })
+    .range(from, to);
+
+  if (error) {
+    console.error("Daftar pelayanan tidak dapat dimuat:", error.message);
+    return fallbackResult();
+  }
+
+  return createPagination(
+    (data as MinistryRow[]).map(mapDatabaseMinistry),
+    count ?? 0,
+    page,
+    pageSize,
+  );
 }

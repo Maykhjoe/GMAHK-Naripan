@@ -18,9 +18,11 @@ import { Logo } from "./logo";
 export function Navbar({
   overlay = false,
   site = defaultSiteConfig,
+  isLive = false,
 }: {
   overlay?: boolean;
   site?: SiteConfig;
+  isLive?: boolean;
 }) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
@@ -149,8 +151,12 @@ export function Navbar({
         <div className="flex items-center gap-2">
           <Button asChild size="default" className="hidden sm:inline-flex">
             <Link href="/live">
-              <Play className="size-4 fill-current" aria-hidden="true" />
-              Tonton Live
+              {isLive ? (
+                <span className="size-2 rounded-full bg-red-500 animate-pulse" />
+              ) : (
+                <Play className="size-4 fill-current" aria-hidden="true" />
+              )}
+              {isLive ? "Sedang Live" : "Tonton Live"}
             </Link>
           </Button>
 
@@ -224,8 +230,12 @@ export function Navbar({
 
             <Button asChild className="mt-8 w-full">
               <Link href="/live" onClick={closeMenu}>
-                <Play className="size-4 fill-current" aria-hidden="true" />
-                Tonton Live
+                {isLive ? (
+                  <span className="size-2 rounded-full bg-red-500 animate-pulse" />
+                ) : (
+                  <Play className="size-4 fill-current" aria-hidden="true" />
+                )}
+                {isLive ? "Sedang Live" : "Tonton Live"}
               </Link>
             </Button>
           </motion.div>

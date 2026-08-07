@@ -1,9 +1,17 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { Check, Heart, Target, Users } from "lucide-react";
+import {
+  CalendarRange,
+  Check,
+  Mail,
+  Phone,
+  Target,
+  UserRound,
+} from "lucide-react";
 
 import { PageHero } from "@/components/sections/page-hero";
 import { SectionHeading } from "@/components/sections/section-heading";
+import { getPublishedLeaders } from "@/lib/data/leaders";
 import { getSiteConfig } from "@/lib/data/site-settings";
 
 export const metadata: Metadata = {
@@ -45,7 +53,28 @@ const beliefs = [
 ];
 
 export default async function AboutPage() {
-  const site = await getSiteConfig();
+  const [site, leaders] = await Promise.all([
+    getSiteConfig(),
+    getPublishedLeaders(),
+  ]);
+
+  const displayedLeaders = leaders.length
+    ? leaders
+    : site.pastorName
+      ? [
+          {
+            id: "fallback-pastor",
+            name: site.pastorName,
+            position: "Pendeta Jemaat",
+            bio: "Melayani penggembalaan, pengajaran, dan pertumbuhan rohani jemaat.",
+            period: null,
+            phone: null,
+            email: null,
+            photoUrl: null,
+            displayOrder: 0,
+          },
+        ]
+      : [];
 
   return (
     <>
@@ -79,9 +108,9 @@ export default async function AboutPage() {
               kebutuhan manusia secara utuh.
             </p>
             <p className="mt-4 leading-8 text-muted">
-              Informasi sejarah dan identitas pengurus pada halaman ini
-              menggunakan placeholder aman dan siap diperbarui setelah data
-              resmi tersedia.
+              Informasi pelayanan dan pengurus ditampilkan dari data resmi
+              yang dikelola melalui dashboard gereja, sehingga dapat terus
+              diperbarui sesuai kebutuhan pelayanan jemaat.
             </p>
           </div>
         </div>
@@ -173,31 +202,108 @@ export default async function AboutPage() {
       </section>
 
       <section id="pengurus" className="section-pad scroll-mt-24 bg-cream">
-        <div className="container-site grid gap-6 md:grid-cols-2">
-          <div className="rounded-2xl border border-primary/5 bg-white p-8 shadow-[0_12px_40px_rgba(38,53,43,.05)]">
-            <Users className="text-secondary" aria-hidden="true" />
-            <h2 className="mt-5 font-serif text-3xl text-primary">
-              Pendeta Jemaat
-            </h2>
-            <p className="mt-4 text-muted">
-              {site.pastorName || "Nama pendeta belum diperbarui"}
-            </p>
-            <p className="mt-2 text-sm leading-6 text-muted">
-              Melayani penggembalaan, pengajaran, dan pertumbuhan rohani
-              jemaat.
-            </p>
-          </div>
+        <div className="container-site">
+          <SectionHeading
+            eyebrow="Pengurus Gereja"
+            title="Melayani dengan hati seorang hamba"
+            description="Kenali para pelayan yang dipercayakan untuk mendampingi, mengajar, dan melayani keluarga jemaat."
+          />
 
-          <div className="rounded-2xl border border-primary/5 bg-white p-8 shadow-[0_12px_40px_rgba(38,53,43,.05)]">
-            <Heart className="text-secondary" aria-hidden="true" />
-            <h2 className="mt-5 font-serif text-3xl text-primary">
-              Struktur Pengurus
-            </h2>
-            <p className="mt-4 leading-7 text-muted">
-              Data pengurus tidak dibuat tanpa sumber resmi. Modul admin telah
-              disiapkan untuk menambahkan informasi yang telah disetujui.
-            </p>
-          </div>
+          {displayedLeaders.length ? (
+            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {displayedLeaders.map((leader) => (
+                <article
+                  key={leader.id}
+                  className="group overflow-hidden rounded-[1.75rem] border border-primary/10 bg-white shadow-[0_16px_50px_rgba(38,53,43,.07)] transition duration-500 hover:-translate-y-1 hover:border-gold/50 hover:shadow-[0_24px_70px_rgba(38,53,43,.12)]"
+                >
+                  <div className="relative aspect-[4/3] overflow-hidden bg-primary/5">
+                    {leader.photoUrl ? (
+                      <Image
+                        src={leader.photoUrl}
+                        alt={`Foto ${leader.name}`}
+                        fill
+                        className="object-cover object-top transition duration-700 group-hover:scale-[1.03]"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      />
+                    ) : (
+                      <div className="grid size-full place-items-center bg-[radial-gradient(circle_at_top,_rgba(199,164,87,.22),_transparent_55%),linear-gradient(135deg,#eef0e9,#dfe5dc)]">
+                        <div className="grid size-24 place-items-center rounded-full border border-primary/10 bg-white/70 text-primary shadow-lg backdrop-blur-sm">
+                          <UserRound className="size-11" aria-hidden="true" />
+                        </div>
+                      </div>
+                    )}
+
+                    <span className="absolute bottom-4 left-4 rounded-full bg-primary/90 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-white backdrop-blur-sm">
+                      {leader.position}
+                    </span>
+                  </div>
+
+                  <div className="p-6 sm:p-7">
+                    <h2 className="font-serif text-2xl text-primary">
+                      {leader.name}
+                    </h2>
+
+                    {leader.period && (
+                      <p className="mt-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-secondary">
+                        <CalendarRange className="size-4" aria-hidden="true" />
+                        Periode {leader.period}
+                      </p>
+                    )}
+
+                    {leader.bio && (
+                      <p className="mt-4 line-clamp-4 text-sm leading-7 text-muted">
+                        {leader.bio}
+                      </p>
+                    )}
+
+                    {(leader.phone || leader.email) && (
+                      <div className="mt-6 space-y-3 border-t border-primary/10 pt-5 text-sm">
+                        {leader.phone && (
+                          <a
+                            href={`tel:${leader.phone.replace(/[^+\d]/g, "")}`}
+                            className="flex w-fit items-center gap-3 text-muted transition-colors hover:text-primary"
+                          >
+                            <Phone
+                              className="size-4 shrink-0 text-gold"
+                              aria-hidden="true"
+                            />
+                            {leader.phone}
+                          </a>
+                        )}
+
+                        {leader.email && (
+                          <a
+                            href={`mailto:${leader.email}`}
+                            className="flex w-fit items-center gap-3 break-all text-muted transition-colors hover:text-primary"
+                          >
+                            <Mail
+                              className="size-4 shrink-0 text-gold"
+                              aria-hidden="true"
+                            />
+                            {leader.email}
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-12 rounded-[1.75rem] border border-dashed border-primary/20 bg-white p-10 text-center">
+              <UserRound
+                className="mx-auto size-10 text-secondary"
+                aria-hidden="true"
+              />
+              <h2 className="mt-5 font-serif text-2xl text-primary">
+                Data pengurus sedang diperbarui
+              </h2>
+              <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-muted">
+                Informasi pengurus akan ditampilkan setelah data resmi
+                dipublikasikan melalui dashboard admin.
+              </p>
+            </div>
+          )}
         </div>
       </section>
     </>
