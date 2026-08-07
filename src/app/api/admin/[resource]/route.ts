@@ -6,6 +6,10 @@ import {
   requireAdminPermission,
   validateMutationOrigin,
 } from "@/lib/admin/auth";
+import {
+  getArticleWorkflowCapabilities,
+  isArticleWorkflowStatus,
+} from "@/lib/admin/article-workflow";
 import { prepareResourcePayload } from "@/lib/admin/resource-payload";
 import { specialWorshipCategories } from "@/lib/constants/worship-schedules";
 import {
@@ -78,6 +82,11 @@ export async function GET(
     return auth;
   }
 
+  const workflow =
+    section === "berita"
+      ? await getArticleWorkflowCapabilities(auth.supabase, auth.user.id)
+      : null;
+
   const url = new URL(request.url);
   const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
   const requestedPageSize = Number(url.searchParams.get("pageSize"));
@@ -98,6 +107,17 @@ export async function GET(
 
   if (resource.softDelete) {
     query = query.is("deleted_at", null);
+  }
+
+  // Contributors see their own article workflow. Reviewers/editors can see all
+  // submitted articles. This explicit API filter complements database RLS.
+  if (
+    section === "berita" &&
+    workflow &&
+    !workflow.canEditAll &&
+    !workflow.canReview
+  ) {
+    query = query.eq("created_by", auth.user.id);
   }
 
   if (search) {
@@ -169,6 +189,7 @@ export async function GET(
     count: count ?? 0,
     page,
     pageSize,
+    ...(workflow ? { workflow } : {}),
   });
 }
 
@@ -269,16 +290,68 @@ export async function POST(
     payload.created_by = auth.user.id;
   }
 
-  const supportsPublishedAt = resource.fields.some(
-    (field) => field.key === "published_at",
-  );
+  if (section === "berita") {
+    const workflow = await getArticleWorkflowCapabilities(
+      auth.supabase,
+      auth.user.id,
+    );
+    const status = payload.status;
 
-  if (
-    supportsPublishedAt &&
-    payload.status === "published" &&
-    !payload.published_at
-  ) {
-    payload.published_at = new Date().toISOString();
+    if (!isArticleWorkflowStatus(status)) {
+      return NextResponse.json(
+        { message: "Status artikel tidak valid" },
+        { status: 422 },
+      );
+    }
+
+    if (status === "published" && !workflow.canPublish) {
+      return NextResponse.json(
+        { message: "Artikel harus melalui peninjauan sebelum dipublikasikan" },
+        { status: 403 },
+      );
+    }
+
+    if (status === "archived" && !workflow.canEditAll) {
+      return NextResponse.json(
+        { message: "Artikel baru tidak dapat langsung diarsipkan" },
+        { status: 422 },
+      );
+    }
+
+    if (!workflow.canReview) {
+      delete payload.review_notes;
+    }
+
+    const now = new Date().toISOString();
+    payload.updated_by = auth.user.id;
+
+    if (status === "pending_review") {
+      payload.review_submitted_at = now;
+      payload.reviewed_by = null;
+      payload.reviewed_at = null;
+    }
+
+    if (status === "published") {
+      payload.published_by = auth.user.id;
+      payload.published_at = now;
+
+      if (workflow.canReview) {
+        payload.reviewed_by = auth.user.id;
+        payload.reviewed_at = now;
+      }
+    }
+  } else {
+    const supportsPublishedAt = resource.fields.some(
+      (field) => field.key === "published_at",
+    );
+
+    if (
+      supportsPublishedAt &&
+      payload.status === "published" &&
+      !payload.published_at
+    ) {
+      payload.published_at = new Date().toISOString();
+    }
   }
 
   const { data, error } = await auth.supabase

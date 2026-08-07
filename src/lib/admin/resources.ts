@@ -42,6 +42,7 @@ export type AdminField = {
   defaultValue?: string | number | boolean;
   sourcePath?: string;
   hidden?: boolean;
+  reviewerOnly?: boolean;
 };
 
 export type AdminResource = {
@@ -67,6 +68,20 @@ const statusOptions = [
   { value: "published", label: "Dipublikasikan" },
   { value: "inactive", label: "Tidak aktif" },
 ] as const;
+
+
+const postStatusField: AdminField = {
+  key: "status",
+  label: "Status",
+  type: "select",
+  required: true,
+  options: [
+    { value: "draft", label: "Draf" },
+    { value: "pending_review", label: "Menunggu Peninjauan" },
+    { value: "published", label: "Dipublikasikan" },
+    { value: "archived", label: "Diarsipkan" },
+  ],
+};
 
 const activeStatus: AdminField = {
   key: "status",
@@ -484,7 +499,7 @@ export const adminResources: Record<string, AdminResource> = {
     title: "Berita & Renungan",
     singular: "Artikel",
     titleColumn: "title",
-    dateColumn: "published_at",
+    dateColumn: "updated_at",
     softDelete: true,
     slugSource: "title",
     searchColumn: "search_text",
@@ -545,8 +560,15 @@ export const adminResources: Record<string, AdminResource> = {
         accept: "image/jpeg,image/png,image/webp",
         help: "JPG, PNG, atau WebP. Maksimal 5 MB.",
       },
-      contentFields.status,
-      contentFields.publishedAt,
+      postStatusField,
+      {
+        key: "review_notes",
+        label: "Catatan Peninjauan",
+        type: "textarea",
+        reviewerOnly: true,
+        placeholder: "Catatan untuk penulis bila artikel perlu diperbaiki.",
+        help: "Hanya reviewer yang dapat mengubah catatan ini. Penulis tetap dapat membacanya.",
+      },
     ],
   },
 
@@ -791,7 +813,7 @@ export const adminResources: Record<string, AdminResource> = {
   "permohonan-doa": {
     section: "permohonan-doa",
     table: "prayer_requests",
-    permission: "prayers.read",
+    permission: "prayers.inbox.read",
     title: "Permohonan Doa",
     singular: "Permohonan",
     titleColumn: "name",
@@ -942,6 +964,11 @@ const protectedFields = new Set([
   "created_at",
   "updated_at",
   "created_by",
+  "updated_by",
+  "reviewed_by",
+  "published_by",
+  "review_submitted_at",
+  "reviewed_at",
   "deleted_at",
   "view_count",
   "download_count",

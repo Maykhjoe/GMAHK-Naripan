@@ -183,9 +183,9 @@ function SubmissionDetails({
         <DetailRow
           label="Akses permohonan"
           value={
-            row.sharing_scope === "pastoral_only"
-              ? "Rahasia — hanya pendeta dan tim pastoral berwenang"
-              : "Boleh dibagikan kepada tim doa dan pastoral"
+            row.sharing_scope === "pastor"
+              ? "Pendeta/Gembala Jemaat"
+              : "Tim Pendoa Jemaat"
           }
         />
         <DetailRow
@@ -537,9 +537,9 @@ export function SubmissionInbox({ kind }: { kind: SubmissionKind }) {
                   </span>
                 </span>
 
-                {kind === "prayer" && row.sharing_scope === "pastoral_only" && (
+                {kind === "prayer" && row.sharing_scope === "pastor" && (
                   <Badge className="hidden bg-purple-100 text-purple-800 sm:inline-flex">
-                    Rahasia
+                    Pendeta
                   </Badge>
                 )}
 

@@ -11,6 +11,7 @@ import {
   FileText,
   GalleryHorizontalEnd,
   LayoutDashboard,
+  LineChart,
   LogOut,
   Menu,
   MessageSquare,
@@ -35,6 +36,7 @@ import { cn } from "@/lib/utils";
 
 const iconMap: Record<string, LucideIcon> = {
   "/admin": LayoutDashboard,
+  "/admin/monitoring": LineChart,
   "/admin/notifikasi": BellRing,
   "/admin/jadwal": CalendarDays,
   "/admin/kegiatan": Activity,

@@ -6,6 +6,10 @@ import {
   requireAdminPermission,
   validateMutationOrigin,
 } from "@/lib/admin/auth";
+import {
+  getArticleWorkflowCapabilities,
+  isArticleWorkflowStatus,
+} from "@/lib/admin/article-workflow";
 import { prepareResourcePayload } from "@/lib/admin/resource-payload";
 import {
   getAdminResource,
@@ -93,6 +97,17 @@ export async function GET(
     query = query.is("deleted_at", null);
   }
 
+  if (section === "berita") {
+    const workflow = await getArticleWorkflowCapabilities(
+      auth.supabase,
+      auth.user.id,
+    );
+
+    if (!workflow.canEditAll && !workflow.canReview) {
+      query = query.eq("created_by", auth.user.id);
+    }
+  }
+
   const { data, error } = await query.maybeSingle();
 
   if (error) {
@@ -175,16 +190,39 @@ export async function PATCH(
     ctx.section === "khotbah" ||
     ctx.section === "departemen"
   ) {
-    const { data: current, error: currentError } = await ctx.auth.supabase
+    const selectColumns =
+      ctx.section === "berita"
+        ? "seo,created_by,status,review_submitted_at,reviewed_by,reviewed_at,review_notes,published_by,published_at"
+        : "seo";
+
+    let currentQuery = ctx.auth.supabase
       .from(ctx.resource.table)
-      .select("seo")
-      .eq("id", ctx.id)
-      .single();
+      .select(selectColumns)
+      .eq("id", ctx.id);
+
+    if (ctx.resource.softDelete) {
+      currentQuery = currentQuery.is("deleted_at", null);
+    }
+
+    const { data: current, error: currentError } =
+      await currentQuery.maybeSingle();
 
     if (currentError) {
+      console.error(`[admin:${ctx.section}] current record failed`, {
+        code: currentError.code,
+        message: currentError.message,
+      });
+
       return NextResponse.json(
         { message: "Data konten saat ini tidak dapat dimuat" },
         { status: 500 },
+      );
+    }
+
+    if (!current) {
+      return NextResponse.json(
+        { message: "Data tidak ditemukan atau tidak dapat diakses" },
+        { status: 404 },
       );
     }
 
@@ -199,23 +237,111 @@ export async function PATCH(
     currentRecord,
   );
 
+  if (ctx.section === "berita") {
+    const workflow = await getArticleWorkflowCapabilities(
+      ctx.auth.supabase,
+      ctx.auth.user.id,
+    );
+    const ownerId = String(currentRecord?.created_by ?? "");
+    const isOwner = ownerId === ctx.auth.user.id;
+    const currentStatus = currentRecord?.status;
+    const requestedStatus = payload.status ?? currentStatus;
+
+    if (!isOwner && !workflow.canEditAll) {
+      return NextResponse.json(
+        { message: "Anda hanya dapat mengubah artikel milik sendiri" },
+        { status: 403 },
+      );
+    }
+
+    if (currentStatus === "published" && !workflow.canEditAll) {
+      return NextResponse.json(
+        {
+          message:
+            "Artikel yang sudah dipublikasikan hanya dapat diubah oleh reviewer",
+        },
+        { status: 403 },
+      );
+    }
+
+    if (!isArticleWorkflowStatus(requestedStatus)) {
+      return NextResponse.json(
+        { message: "Status artikel tidak valid" },
+        { status: 422 },
+      );
+    }
+
+    if (requestedStatus === "published" && !workflow.canPublish) {
+      return NextResponse.json(
+        { message: "Anda tidak memiliki izin untuk menerbitkan artikel" },
+        { status: 403 },
+      );
+    }
+
+    if (!workflow.canReview) {
+      delete payload.review_notes;
+    }
+
+    const now = new Date().toISOString();
+    payload.updated_by = ctx.auth.user.id;
+
+    if (requestedStatus === "pending_review") {
+      payload.status = "pending_review";
+      payload.review_submitted_at = now;
+      payload.reviewed_by = null;
+      payload.reviewed_at = null;
+
+      if (!workflow.canReview) {
+        payload.review_notes = null;
+      }
+    }
+
+    if (
+      requestedStatus === "draft" &&
+      currentStatus === "pending_review"
+    ) {
+      payload.status = "draft";
+
+      if (workflow.canReview) {
+        payload.reviewed_by = ctx.auth.user.id;
+        payload.reviewed_at = now;
+      } else {
+        payload.review_submitted_at = null;
+      }
+    }
+
+    if (
+      requestedStatus === "published" &&
+      currentStatus !== "published"
+    ) {
+      payload.status = "published";
+      payload.published_by = ctx.auth.user.id;
+      payload.published_at = now;
+
+      if (workflow.canReview) {
+        payload.reviewed_by = ctx.auth.user.id;
+        payload.reviewed_at = now;
+      }
+    }
+  } else {
+    const supportsPublishedAt = ctx.resource.fields.some(
+      (field) => field.key === "published_at",
+    );
+
+    if (
+      supportsPublishedAt &&
+      payload.status === "published" &&
+      !payload.published_at
+    ) {
+      payload.published_at = new Date().toISOString();
+    }
+  }
+
   if (Object.keys(payload).length === 0) {
     return NextResponse.json(
       { message: "Tidak ada perubahan" },
       { status: 400 },
     );
-  }
-
-  const supportsPublishedAt = ctx.resource.fields.some(
-    (field) => field.key === "published_at",
-  );
-
-  if (
-    supportsPublishedAt &&
-    payload.status === "published" &&
-    !payload.published_at
-  ) {
-    payload.published_at = new Date().toISOString();
   }
 
   const { data, error } = await ctx.auth.supabase
@@ -251,6 +377,66 @@ export async function DELETE(
 
   if ("response" in ctx) {
     return ctx.response;
+  }
+
+  if (ctx.section === "berita") {
+    const workflow = await getArticleWorkflowCapabilities(
+      ctx.auth.supabase,
+      ctx.auth.user.id,
+    );
+    const { data: current, error: currentError } = await ctx.auth.supabase
+      .from("posts")
+      .select("created_by,status")
+      .eq("id", ctx.id)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (currentError) {
+      return NextResponse.json(
+        { message: "Artikel tidak dapat diperiksa" },
+        { status: 500 },
+      );
+    }
+
+    if (!current) {
+      return NextResponse.json(
+        { message: "Artikel tidak ditemukan" },
+        { status: 404 },
+      );
+    }
+
+    const isOwner = current.created_by === ctx.auth.user.id;
+
+    if (!isOwner && !workflow.canEditAll) {
+      return NextResponse.json(
+        { message: "Anda hanya dapat mengarsipkan artikel milik sendiri" },
+        { status: 403 },
+      );
+    }
+
+    if (current.status === "published" && !workflow.canEditAll) {
+      return NextResponse.json(
+        { message: "Artikel terbit hanya dapat diarsipkan oleh reviewer" },
+        { status: 403 },
+      );
+    }
+
+    const { error } = await ctx.auth.supabase
+      .from("posts")
+      .update({
+        status: "archived",
+        updated_by: ctx.auth.user.id,
+      })
+      .eq("id", ctx.id);
+
+    if (error) {
+      return NextResponse.json(
+        { message: "Artikel tidak dapat diarsipkan" },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({ success: true });
   }
 
   const operation = ctx.resource.softDelete

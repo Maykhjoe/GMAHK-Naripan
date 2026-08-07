@@ -10,7 +10,7 @@ const optionalPhone = z
   ])
   .optional();
 
-export const prayerSharingScopes = ["prayer_team", "pastoral_only"] as const;
+export const prayerSharingScopes = ["prayer_team", "pastor"] as const;
 
 export const prayerRequestSchema = z.object({
   name: z.string().trim().min(2, "Nama minimal 2 karakter").max(80),

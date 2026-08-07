@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import type { ArticleWorkflowCapabilities } from "@/lib/admin/article-workflow";
 import { Input } from "@/components/ui/input";
 import {
   getOptionLabel,
@@ -163,12 +164,14 @@ export function ResourceFormDialog({
   open,
   onOpenChange,
   onSaved,
+  workflow = null,
 }: {
   resource: AdminResource;
   record: AdminRecord | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: (record: AdminRecord) => void;
+  workflow?: ArticleWorkflowCapabilities | null;
 }) {
   const [remoteOptions, setRemoteOptions] = useState<
     Record<string, AdminFieldOption[]>
@@ -505,10 +508,22 @@ export function ResourceFormDialog({
                 );
               }
 
-              const options =
+              const baseOptions =
                 field.options ?? remoteOptions[field.key] ?? ([] as const);
+              const options =
+                resource.section === "berita" &&
+                field.key === "status" &&
+                !workflow?.canPublish
+                  ? baseOptions.filter(
+                      (option) => getOptionValue(option) !== "published",
+                    )
+                  : baseOptions;
               const selectField =
                 field.type === "select" || field.type === "relation";
+              const reviewerReadOnly =
+                Boolean(field.reviewerOnly) &&
+                resource.section === "berita" &&
+                !workflow?.canReview;
 
               return (
                 <label
@@ -525,7 +540,8 @@ export function ResourceFormDialog({
                   {selectField ? (
                     <select
                       required={field.required}
-                      className="mt-2 h-12 w-full rounded-xl border border-primary/15 bg-white px-4 text-sm outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
+                      disabled={reviewerReadOnly}
+                      className="mt-2 h-12 w-full rounded-xl border border-primary/15 bg-white px-4 text-sm outline-none disabled:bg-slate-50 disabled:text-muted focus:border-gold focus:ring-2 focus:ring-gold/20"
                       {...register(field.key)}
                     >
                       {!options.some(
@@ -547,7 +563,8 @@ export function ResourceFormDialog({
                       required={field.required}
                       rows={fieldRows(field)}
                       placeholder={field.placeholder}
-                      className="mt-2 w-full rounded-xl border border-primary/15 bg-white px-4 py-3 font-normal leading-7 outline-none focus:border-gold focus:ring-2 focus:ring-gold/20"
+                      readOnly={reviewerReadOnly}
+                      className="mt-2 w-full rounded-xl border border-primary/15 bg-white px-4 py-3 font-normal leading-7 outline-none read-only:bg-slate-50 read-only:text-muted focus:border-gold focus:ring-2 focus:ring-gold/20"
                       {...register(field.key)}
                     />
                   ) : (

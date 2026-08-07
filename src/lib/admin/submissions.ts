@@ -31,7 +31,7 @@ export const submissionConfigs: Record<SubmissionKind, SubmissionConfig> = {
     kind: "prayer",
     section: "permohonan-doa",
     table: "prayer_requests",
-    permission: "prayers.read",
+    permission: "prayers.inbox.read",
     title: "Permohonan Doa",
     singular: "Permohonan doa",
     searchColumn: "name",

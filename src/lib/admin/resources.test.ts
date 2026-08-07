@@ -36,9 +36,28 @@ describe("admin resource registry", () => {
     });
     expect(getAdminResource("permohonan-doa")).toMatchObject({
       table: "prayer_requests",
-      permission: "prayers.read",
+      permission: "prayers.inbox.read",
       readOnly: false,
     });
+  });
+
+
+  it("menggunakan workflow editorial final untuk berita", () => {
+    const resource = getAdminResource("berita");
+    const status = resource?.fields.find((field) => field.key === "status");
+    const values = status?.options?.map((option) =>
+      typeof option === "string" ? option : option.value,
+    );
+
+    expect(values).toEqual([
+      "draft",
+      "pending_review",
+      "published",
+      "archived",
+    ]);
+    expect(resource?.fields.some((field) => field.key === "review_notes")).toBe(
+      true,
+    );
   });
 
   it("rejects unknown resources", () => {

@@ -180,7 +180,7 @@ export function PrayerRequestForm() {
 
       <fieldset>
         <legend className="text-sm font-semibold text-primary">
-          Siapa yang boleh melihat permohonan ini?
+          Siapa yang Anda inginkan untuk mendoakan permohonan ini?
         </legend>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-primary/10 bg-cream p-4 transition has-[:checked]:border-secondary has-[:checked]:bg-[#e8f1e9]">
@@ -193,10 +193,10 @@ export function PrayerRequestForm() {
             <span>
               <span className="flex items-center gap-2 font-semibold text-primary">
                 <UsersRound className="size-4 text-secondary" />
-                Tim Doa & Pastoral
+                Tim Pendoa Jemaat
               </span>
               <span className="mt-1 block text-xs leading-5 text-muted">
-                Boleh dibagikan kepada tim doa yang ditugaskan dan tim pastoral.
+                Permohonan diterima oleh Tim Pendoa Jemaat yang telah diberi akses pelayanan.
               </span>
             </span>
           </label>
@@ -204,17 +204,17 @@ export function PrayerRequestForm() {
           <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-primary/10 bg-cream p-4 transition has-[:checked]:border-secondary has-[:checked]:bg-[#e8f1e9]">
             <input
               type="radio"
-              value="pastoral_only"
+              value="pastor"
               className="mt-1 accent-primary"
               {...register("sharingScope")}
             />
             <span>
               <span className="flex items-center gap-2 font-semibold text-primary">
                 <ShieldCheck className="size-4 text-secondary" />
-                Rahasia — Pastoral Saja
+                Pendeta/Gembala Jemaat
               </span>
               <span className="mt-1 block text-xs leading-5 text-muted">
-                Hanya pendeta dan tim pastoral berwenang yang dapat membacanya.
+                Permohonan hanya diterima oleh Pendeta/Gembala Jemaat.
               </span>
             </span>
           </label>
@@ -238,7 +238,7 @@ export function PrayerRequestForm() {
             className="mt-1 accent-primary"
             {...register("mayContact")}
           />
-          Saya bersedia dihubungi untuk dukungan pastoral.
+          Saya bersedia dihubungi untuk dukungan pelayanan.
         </label>
 
         <label className="flex items-start gap-3">

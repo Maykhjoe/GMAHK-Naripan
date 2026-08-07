@@ -1,29 +1,65 @@
 -- Safe seed data in Indonesian. No real leader identities or sensitive contact data.
 insert into public.roles(code,name,description) values
-('super_admin','Super Admin','Akses penuh sistem'),('web_administrator','Web Administrator','Administrasi teknis dan konten'),
-('secretariat','Sekretariat','Jadwal, pengunjung, pesan, dan administrasi'),('media_team','Media Team','Khotbah, live, galeri, dan media'),
-('editor','Editor','Berita, renungan, dan konten'),('pastoral','Pastoral','Pelayanan pastoral dan permohonan doa'),
-('department_admin','Department Admin','Konten departemen yang ditugaskan') on conflict(code) do nothing;
+('super_admin','Super Admin','Mengelola sistem, keamanan, pengguna, dan monitoring pelayanan.'),
+('pastor','Pendeta/Gembala Jemaat','Memimpin pelayanan jemaat dan menangani permohonan doa untuk pendeta.'),
+('church_chair','Ketua Jemaat','Mendukung operasional pelayanan di bawah Pendeta/Gembala Jemaat.'),
+('prayer_team','Tim Pendoa Jemaat','Menangani permohonan doa yang ditujukan kepada Tim Pendoa Jemaat.'),
+('secretary','Sekretaris','Kegiatan, jadwal, pengunjung, pesan, dan administrasi.'),
+('editor','Editor','Berita, renungan, dan kualitas konten.'),
+('media','Media','Khotbah, live, galeri, dan media.'),
+('department_admin','Admin Departemen','Konten departemen yang ditugaskan')
+on conflict(code) do update set name=excluded.name, description=excluded.description, status='active';
 
 insert into public.permissions(code,name,module) values
-('dashboard.read','Lihat Dashboard','dashboard'),('schedules.manage','Kelola Jadwal','schedules'),('events.manage','Kelola Kegiatan','events'),
-('sermons.manage','Kelola Khotbah','sermons'),('livestreams.manage','Kelola Live','livestreams'),('posts.manage','Kelola Artikel','posts'),
-('ministries.manage','Kelola Departemen','ministries'),('leaders.manage','Kelola Pengurus','leaders'),('gallery.manage','Kelola Galeri','gallery'),
-('prayers.read','Baca Permohonan Doa','prayers'),('visitors.read','Baca Pengunjung Baru','visitors'),('messages.read','Baca Pesan','messages'),
-('files.manage','Kelola File','files'),('users.manage','Kelola Pengguna','users'),('appearance.manage','Kelola Tampilan','appearance'),
-('settings.manage','Kelola Pengaturan','settings') on conflict(code) do nothing;
+('dashboard.read','Lihat Dashboard','dashboard'),
+('monitoring.read','Lihat Monitoring Pelayanan','monitoring'),
+('schedules.manage','Kelola Jadwal','schedules'),
+('events.manage','Kelola Kegiatan','events'),
+('sermons.manage','Kelola Khotbah','sermons'),
+('livestreams.manage','Kelola Live','livestreams'),
+('posts.manage','Kelola Artikel','posts'),
+('ministries.manage','Kelola Departemen','ministries'),
+('leaders.manage','Kelola Pengurus','leaders'),
+('gallery.manage','Kelola Galeri','gallery'),
+('prayers.inbox.read','Akses Kotak Masuk Permohonan Doa','prayers'),
+('visitors.read','Baca Pengunjung Baru','visitors'),
+('messages.read','Baca Pesan','messages'),
+('files.manage','Kelola File','files'),
+('users.manage','Kelola Pengguna','users'),
+('appearance.manage','Kelola Tampilan','appearance'),
+('settings.manage','Kelola Pengaturan','settings')
+on conflict(code) do update set name=excluded.name, module=excluded.module;
 
--- Web administrator receives all non-private content administration permissions.
+-- The final permission matrix is also enforced by migration 202608070005.
+with permission_matrix(role_code, permission_code) as (
+  values
+    ('super_admin','dashboard.read'),('super_admin','monitoring.read'),
+    ('pastor','dashboard.read'),('pastor','schedules.manage'),('pastor','events.manage'),
+    ('pastor','sermons.manage'),('pastor','posts.manage'),('pastor','leaders.manage'),
+    ('pastor','prayers.inbox.read'),('pastor','visitors.read'),
+    ('church_chair','dashboard.read'),('church_chair','schedules.manage'),
+    ('church_chair','events.manage'),('church_chair','posts.manage'),
+    ('church_chair','leaders.manage'),('church_chair','visitors.read'),
+    ('prayer_team','dashboard.read'),('prayer_team','posts.manage'),
+    ('prayer_team','prayers.inbox.read'),
+    ('secretary','dashboard.read'),('secretary','schedules.manage'),
+    ('secretary','events.manage'),('secretary','posts.manage'),
+    ('secretary','leaders.manage'),('secretary','visitors.read'),
+    ('secretary','messages.read'),('secretary','files.manage'),
+    ('editor','dashboard.read'),('editor','posts.manage'),
+    ('editor','sermons.manage'),('editor','events.manage'),
+    ('media','dashboard.read'),('media','posts.manage'),('media','sermons.manage'),
+    ('media','livestreams.manage'),('media','gallery.manage'),('media','files.manage'),
+    ('department_admin','dashboard.read'),('department_admin','posts.manage'),
+    ('department_admin','events.manage'),('department_admin','ministries.manage'),
+    ('department_admin','gallery.manage')
+)
 insert into public.role_permissions(role_id,permission_id)
-select r.id,p.id from public.roles r cross join public.permissions p where r.code='web_administrator' and p.code in
-('dashboard.read','schedules.manage','events.manage','sermons.manage','livestreams.manage','posts.manage','ministries.manage','leaders.manage','gallery.manage','files.manage','users.manage','appearance.manage','settings.manage') on conflict do nothing;
-insert into public.role_permissions(role_id,permission_id)
-select r.id,p.id from public.roles r cross join public.permissions p where
-(r.code='pastoral' and p.code in ('dashboard.read','schedules.manage','sermons.manage','posts.manage','prayers.read','visitors.read')) or
-(r.code='secretariat' and p.code in ('dashboard.read','schedules.manage','events.manage','leaders.manage','visitors.read','messages.read','files.manage')) or
-(r.code='media_team' and p.code in ('dashboard.read','sermons.manage','livestreams.manage','gallery.manage','files.manage')) or
-(r.code='editor' and p.code in ('dashboard.read','posts.manage','sermons.manage','events.manage')) or
-(r.code='department_admin' and p.code in ('dashboard.read','events.manage','posts.manage','ministries.manage','gallery.manage')) on conflict do nothing;
+select role.id, permission.id
+from permission_matrix matrix
+join public.roles role on role.code=matrix.role_code
+join public.permissions permission on permission.code=matrix.permission_code
+on conflict do nothing;
 
 insert into public.church_profiles(name,short_name,description,vision,mission,address,whatsapp,email,status) values
 ('Gereja Masehi Advent Hari Ketujuh Jemaat Naripan','GMAHK Naripan','Sebuah keluarga iman yang bertumbuh dalam Firman dan melayani dalam kasih.','Menjadi komunitas yang mencerminkan kasih Kristus dan membawa pengharapan.','["Bertumbuh dalam Firman","Melayani dengan kasih","Menguatkan setiap generasi"]','[Alamat Gereja — silakan diperbarui]','[Nomor WhatsApp]','[Email Gereja]','active');

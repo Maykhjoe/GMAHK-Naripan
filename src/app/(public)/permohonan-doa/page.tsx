@@ -7,7 +7,7 @@ import { PageHero } from "@/components/sections/page-hero";
 export const metadata: Metadata = {
   title: "Permohonan Doa",
   description:
-    "Kirim permohonan doa secara privat kepada tim doa atau tim pastoral GMAHK Naripan.",
+    "Kirim permohonan doa secara privat kepada Tim Pendoa Jemaat atau Pendeta/Gembala Jemaat GMAHK Naripan.",
   robots: { index: false, follow: false },
 };
 
@@ -34,16 +34,15 @@ export default function PrayerPage() {
               <div className="flex gap-3">
                 <UsersRound className="mt-0.5 size-4 shrink-0 text-gold" />
                 <p className="leading-6 text-white/65">
-                  <strong className="block text-white">Tim Doa & Pastoral</strong>
-                  Untuk permohonan yang boleh dibawa bersama oleh tim doa.
+                  <strong className="block text-white">Tim Pendoa Jemaat</strong>
+                  Untuk permohonan yang ingin didoakan oleh Tim Pendoa Jemaat.
                 </p>
               </div>
               <div className="flex gap-3">
                 <ShieldCheck className="mt-0.5 size-4 shrink-0 text-gold" />
                 <p className="leading-6 text-white/65">
-                  <strong className="block text-white">Pastoral Saja</strong>
-                  Untuk pergumulan yang sangat pribadi dan memerlukan akses lebih
-                  terbatas.
+                  <strong className="block text-white">Pendeta/Gembala Jemaat</strong>
+                  Untuk permohonan yang ingin diterima khusus oleh Pendeta/Gembala Jemaat.
                 </p>
               </div>
             </div>

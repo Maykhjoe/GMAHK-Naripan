@@ -26,6 +26,8 @@ import type {
   AdminFieldOption,
   AdminResource,
 } from "@/lib/admin/resources";
+import { articleStatusLabel } from "@/lib/admin/article-workflow";
+import type { ArticleWorkflowCapabilities } from "@/lib/admin/article-workflow";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -125,6 +127,7 @@ export function DataTable({ resource }: { resource: AdminResource }) {
   const [deleting, setDeleting] = useState<AdminRecord | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<SelectOption[]>([]);
+  const [workflow, setWorkflow] = useState<ArticleWorkflowCapabilities | null>(null);
 
   const statusField = resource.fields.find((field) => field.key === "status");
   const statusOptions = (statusField?.options ?? []).map(optionValue);
@@ -182,6 +185,7 @@ export function DataTable({ resource }: { resource: AdminResource }) {
     if (!response.ok) {
       setRows([]);
       setCount(0);
+      setWorkflow(null);
       setError(result.message ?? "Data tidak dapat dimuat");
       setLoading(false);
       return;
@@ -189,6 +193,7 @@ export function DataTable({ resource }: { resource: AdminResource }) {
 
     setRows(result.data ?? []);
     setCount(result.count ?? 0);
+    setWorkflow(result.workflow ?? null);
     setLoading(false);
   }, [
     category,
@@ -533,6 +538,24 @@ export function DataTable({ resource }: { resource: AdminResource }) {
           </div>
         </div>
 
+        {resource.section === "berita" && workflow && (
+          <div className="border-b border-primary/10 bg-cream/60 px-5 py-3 text-xs leading-5 text-muted">
+            {workflow.canPublish ? (
+              <span>
+                Anda dapat meninjau dan menerbitkan artikel. Artikel berstatus
+                <strong className="mx-1 text-primary">Menunggu Peninjauan</strong>
+                siap diperiksa sebelum dipublikasikan.
+              </span>
+            ) : (
+              <span>
+                Anda dapat membuat dan mengedit artikel milik sendiri. Pilih
+                <strong className="mx-1 text-primary">Menunggu Peninjauan</strong>
+                untuk mengirim artikel kepada reviewer.
+              </span>
+            )}
+          </div>
+        )}
+
         {error && (
           <div
             role="alert"
@@ -586,7 +609,25 @@ export function DataTable({ resource }: { resource: AdminResource }) {
                 </tr>
               ) : (
                 rows.map((row) => {
-                  const path = previewPath(resource.section, row);
+                  const path =
+                    row.status === "published"
+                      ? previewPath(resource.section, row)
+                      : null;
+                  const isArticle = resource.section === "berita";
+                  const isOwner =
+                    !isArticle ||
+                    !workflow ||
+                    String(row.created_by ?? "") === workflow.userId;
+                  const articleLocked =
+                    isArticle &&
+                    !workflow?.canEditAll &&
+                    (!isOwner || row.status === "published");
+                  const canEditRow = !articleLocked;
+                  const canArchiveRow =
+                    !isArticle ||
+                    (row.status !== "archived" &&
+                      (Boolean(workflow?.canEditAll) ||
+                        (isOwner && row.status !== "published")));
 
                   return (
                     <tr key={row.id} className="hover:bg-cream/50">
@@ -595,7 +636,9 @@ export function DataTable({ resource }: { resource: AdminResource }) {
                       </td>
                       <td className="px-5 py-4">
                         <Badge className={badgeClass(row.status)}>
-                          {String(row.status ?? "—")}
+                          {resource.section === "berita"
+                            ? articleStatusLabel(row.status)
+                            : String(row.status ?? "—")}
                         </Badge>
                       </td>
                       <td className="px-5 py-4 text-muted">
@@ -614,20 +657,24 @@ export function DataTable({ resource }: { resource: AdminResource }) {
                               <Eye className="size-4" />
                             </a>
                           )}
-                          <button
-                            onClick={() => openEdit(row)}
-                            className="grid size-9 place-items-center rounded-lg hover:bg-cream"
-                            aria-label="Edit"
-                          >
-                            <Pencil className="size-4" />
-                          </button>
-                          <button
-                            onClick={() => setDeleting(row)}
-                            className="grid size-9 place-items-center rounded-lg text-red-700 hover:bg-red-50"
-                            aria-label="Hapus"
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
+                          {canEditRow && (
+                            <button
+                              onClick={() => openEdit(row)}
+                              className="grid size-9 place-items-center rounded-lg hover:bg-cream"
+                              aria-label="Edit"
+                            >
+                              <Pencil className="size-4" />
+                            </button>
+                          )}
+                          {canArchiveRow && (
+                            <button
+                              onClick={() => setDeleting(row)}
+                              className="grid size-9 place-items-center rounded-lg text-red-700 hover:bg-red-50"
+                              aria-label="Arsipkan"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -692,14 +739,19 @@ export function DataTable({ resource }: { resource: AdminResource }) {
         open={formOpen}
         onOpenChange={handleFormOpenChange}
         onSaved={saved}
+        workflow={workflow}
       />
       <ConfirmationDialog
         open={Boolean(deleting)}
         onOpenChange={(open) => !open && setDeleting(null)}
         onConfirm={confirmDelete}
         busy={deleteBusy}
-        title={`Hapus ${resource.singular}?`}
-        description="Data akan dinonaktifkan dan disembunyikan dari website. Tindakan ini dicatat dalam audit log."
+        title={`${resource.section === "berita" ? "Arsipkan" : "Hapus"} ${resource.singular}?`}
+        description={
+          resource.section === "berita"
+            ? "Artikel akan dipindahkan ke status Diarsipkan dan tidak tampil di website. Data tidak dihapus permanen."
+            : "Data akan dinonaktifkan dan disembunyikan dari website. Tindakan ini dicatat dalam audit log."
+        }
       />
     </>
   );

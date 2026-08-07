@@ -35,10 +35,12 @@ export default function PrivacyPage() {
               Permohonan doa
             </h2>
             <p className="mt-3 leading-8">
-              Pemohon dapat memilih apakah permohonan boleh dibagikan kepada tim
-              doa dan pastoral, atau dibatasi hanya untuk pendeta serta tim
-              pastoral yang berwenang. Pilihan tersebut diterapkan melalui akses
-              berbasis peran pada sistem admin.
+              Pemohon memilih salah satu penerima: Tim Pendoa Jemaat atau
+              Pendeta/Gembala Jemaat. Pilihan tersebut diterapkan melalui akses
+              berbasis peran pada sistem admin. Super Admin memantau status dan
+              progres tanpa melihat isi doa secara rutin. Akses khusus untuk
+              penanganan masalah wajib disertai alasan dan dicatat dalam audit
+              sistem.
             </p>
           </section>
 

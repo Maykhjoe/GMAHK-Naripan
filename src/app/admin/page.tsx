@@ -1,18 +1,42 @@
 import Link from "next/link";
 import {
   CalendarCheck,
+  CheckCircle2,
   ChevronRight,
   FileText,
+  LineChart,
   Mail,
   MessageSquare,
   Plus,
   UserRound,
   UsersRound,
   Video,
+  type LucideIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  canAccess,
+  resolveHighestRole,
+  type AdminRole,
+  type Permission,
+} from "@/lib/permissions/rbac";
 import { createClient } from "@/lib/supabase/server";
+
+type RoleRelation = {
+  roles:
+    | { code?: string; status?: string }
+    | { code?: string; status?: string }[]
+    | null;
+};
+
+type Metric = {
+  label: string;
+  value: number;
+  icon: LucideIcon;
+  href: string;
+  permission?: Permission;
+};
 
 function jakartaDate(value: string) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -24,15 +48,8 @@ function jakartaDate(value: string) {
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
-  let metrics = [
-    { label: "Total Artikel", value: 0, icon: FileText, href: "/admin/berita" },
-    { label: "Total Kegiatan", value: 0, icon: CalendarCheck, href: "/admin/kegiatan" },
-    { label: "Total Khotbah", value: 0, icon: Video, href: "/admin/khotbah" },
-    { label: "Doa Baru", value: 0, icon: MessageSquare, href: "/admin/permohonan-doa" },
-    { label: "Pengunjung Baru", value: 0, icon: UserRound, href: "/admin/pengunjung" },
-    { label: "Pesan Baru", value: 0, icon: Mail, href: "/admin/pesan" },
-    { label: "Pendaftaran Baru", value: 0, icon: UsersRound, href: "/admin/pendaftaran" },
-  ];
+  let role: AdminRole = "super_admin";
+  let metrics: Metric[] = [];
   let events: { id: string; title: string; starts_at: string }[] = [];
   let logs: {
     id: string;
@@ -42,73 +59,190 @@ export default async function AdminDashboard() {
   }[] = [];
 
   if (supabase) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("roles(code,status)")
+        .eq("user_id", user.id);
+
+      const codes = ((roleData ?? []) as RoleRelation[])
+        .flatMap((item) =>
+          Array.isArray(item.roles)
+            ? item.roles
+            : item.roles
+              ? [item.roles]
+              : [],
+        )
+        .filter((item) => item.status === "active")
+        .map((item) => item.code)
+        .filter((code): code is string => Boolean(code));
+
+      role = resolveHighestRole(codes) ?? role;
+    }
+
     const [
       posts,
+      pendingReviews,
       eventCount,
       sermons,
-      prayers,
       visitors,
       messages,
       registrations,
-      upcoming,
-      audit,
     ] = await Promise.all([
-      supabase
-        .from("posts")
-        .select("id", { count: "exact", head: true })
-        .is("deleted_at", null),
-      supabase
-        .from("events")
-        .select("id", { count: "exact", head: true })
-        .is("deleted_at", null),
-      supabase
-        .from("sermons")
-        .select("id", { count: "exact", head: true })
-        .is("deleted_at", null),
-      supabase
+        supabase
+          .from("posts")
+          .select("id", { count: "exact", head: true })
+          .is("deleted_at", null),
+        supabase
+          .from("posts")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "pending_review")
+          .is("deleted_at", null),
+        supabase
+          .from("events")
+          .select("id", { count: "exact", head: true })
+          .is("deleted_at", null),
+        supabase
+          .from("sermons")
+          .select("id", { count: "exact", head: true })
+          .is("deleted_at", null),
+        supabase
+          .from("visitor_forms")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "new")
+          .is("deleted_at", null),
+        supabase
+          .from("contact_messages")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "unread")
+          .is("deleted_at", null),
+        supabase
+          .from("event_registrations")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "registered"),
+      ]);
+
+    const candidateMetrics: Metric[] = [
+      {
+        label: "Total Artikel",
+        value: posts.count ?? 0,
+        icon: FileText,
+        href: "/admin/berita",
+        permission: "posts.manage",
+      },
+      {
+        label: "Menunggu Peninjauan",
+        value: pendingReviews.count ?? 0,
+        icon: CheckCircle2,
+        href: "/admin/berita?status=pending_review",
+        permission: "posts.manage",
+      },
+      {
+        label: "Total Kegiatan",
+        value: eventCount.count ?? 0,
+        icon: CalendarCheck,
+        href: "/admin/kegiatan",
+        permission: "events.manage",
+      },
+      {
+        label: "Total Khotbah",
+        value: sermons.count ?? 0,
+        icon: Video,
+        href: "/admin/khotbah",
+        permission: "sermons.manage",
+      },
+      {
+        label: "Pengunjung Baru",
+        value: visitors.count ?? 0,
+        icon: UserRound,
+        href: "/admin/pengunjung",
+        permission: "visitors.read",
+      },
+      {
+        label: "Pesan Baru",
+        value: messages.count ?? 0,
+        icon: Mail,
+        href: "/admin/pesan",
+        permission: "messages.read",
+      },
+      {
+        label: "Pendaftaran Baru",
+        value: registrations.count ?? 0,
+        icon: UsersRound,
+        href: "/admin/pendaftaran",
+        permission: "events.manage",
+      },
+    ];
+
+    metrics = candidateMetrics.filter(
+      (metric) => !metric.permission || canAccess(role, metric.permission),
+    );
+
+    if (role === "super_admin") {
+      const { data } = await supabase.rpc("get_prayer_service_monitoring");
+      const summary = Array.isArray(data) ? data[0] : data;
+
+      metrics.splice(1, 0, {
+        label: "Doa Lewat 24 Jam",
+        value: Number(summary?.overdue_count ?? 0),
+        icon: LineChart,
+        href: "/admin/monitoring",
+      });
+    } else if (canAccess(role, "prayers.inbox.read")) {
+      const prayers = await supabase
         .from("prayer_requests")
         .select("id", { count: "exact", head: true })
         .eq("status", "unread")
-        .is("deleted_at", null),
-      supabase
-        .from("visitor_forms")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "new")
-        .is("deleted_at", null),
-      supabase
-        .from("contact_messages")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "unread")
-        .is("deleted_at", null),
-      supabase
-        .from("event_registrations")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "registered"),
-      supabase
+        .is("deleted_at", null);
+
+      metrics.splice(1, 0, {
+        label: "Doa Baru",
+        value: prayers.count ?? 0,
+        icon: MessageSquare,
+        href: "/admin/permohonan-doa",
+      });
+    }
+
+    if (canAccess(role, "events.manage")) {
+      const upcoming = await supabase
         .from("events")
         .select("id,title,starts_at")
         .gte("starts_at", new Date().toISOString())
         .is("deleted_at", null)
         .order("starts_at")
-        .limit(3),
-      supabase
+        .limit(3);
+      events = upcoming.data ?? [];
+    }
+
+    if (role === "super_admin") {
+      const audit = await supabase
         .from("audit_logs")
         .select("id,action,entity_type,created_at")
         .order("created_at", { ascending: false })
-        .limit(6),
-    ]);
-
+        .limit(6);
+      logs = audit.data ?? [];
+    }
+  } else {
     metrics = [
-      { label: "Total Artikel", value: posts.count ?? 0, icon: FileText, href: "/admin/berita" },
-      { label: "Total Kegiatan", value: eventCount.count ?? 0, icon: CalendarCheck, href: "/admin/kegiatan" },
-      { label: "Total Khotbah", value: sermons.count ?? 0, icon: Video, href: "/admin/khotbah" },
-      { label: "Doa Baru", value: prayers.count ?? 0, icon: MessageSquare, href: "/admin/permohonan-doa" },
-      { label: "Pengunjung Baru", value: visitors.count ?? 0, icon: UserRound, href: "/admin/pengunjung" },
-      { label: "Pesan Baru", value: messages.count ?? 0, icon: Mail, href: "/admin/pesan" },
-      { label: "Pendaftaran Baru", value: registrations.count ?? 0, icon: UsersRound, href: "/admin/pendaftaran" },
+      { label: "Total Artikel", value: 0, icon: FileText, href: "/admin/berita" },
+      {
+        label: "Doa Lewat 24 Jam",
+        value: 0,
+        icon: LineChart,
+        href: "/admin/monitoring",
+      },
+      {
+        label: "Total Kegiatan",
+        value: 0,
+        icon: CalendarCheck,
+        href: "/admin/kegiatan",
+      },
+      { label: "Total Khotbah", value: 0, icon: Video, href: "/admin/khotbah" },
     ];
-    events = upcoming.data ?? [];
-    logs = audit.data ?? [];
   }
 
   return (
@@ -165,17 +299,19 @@ export default async function AdminDashboard() {
             <h2 className="font-serif text-2xl text-primary">
               Kegiatan mendatang
             </h2>
-            <Link
-              href="/admin/kegiatan"
-              className="text-sm font-semibold text-secondary"
-            >
-              Lihat semua
-            </Link>
+            {canAccess(role, "events.manage") && (
+              <Link
+                href="/admin/kegiatan"
+                className="text-sm font-semibold text-secondary"
+              >
+                Lihat semua
+              </Link>
+            )}
           </div>
           <div className="mt-6 divide-y divide-primary/8">
             {events.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted">
-                Belum ada kegiatan mendatang.
+                Belum ada kegiatan mendatang yang dapat dikelola.
               </p>
             ) : (
               events.map((event) => (
@@ -201,10 +337,16 @@ export default async function AdminDashboard() {
 
         <section className="rounded-2xl border border-primary/8 bg-white p-6">
           <h2 className="font-serif text-2xl text-primary">
-            Aktivitas terbaru
+            {role === "super_admin" ? "Aktivitas terbaru" : "Akses konten"}
           </h2>
           <div className="mt-6 space-y-4">
-            {logs.length === 0 ? (
+            {role !== "super_admin" ? (
+              <div className="rounded-xl bg-cream p-5 text-sm leading-6 text-muted">
+                Semua role dapat membuat berita dan artikel. Kontributor mengelola
+                artikel miliknya sendiri, sedangkan reviewer dapat memeriksa dan
+                menerbitkan artikel yang dikirim untuk peninjauan.
+              </div>
+            ) : logs.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted">
                 Belum ada aktivitas tercatat.
               </p>

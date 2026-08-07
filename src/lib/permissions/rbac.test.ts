@@ -4,48 +4,84 @@ import {
   canAccess,
   getAllowedAdminMenu,
   resolveHighestRole,
-  type AdminRole,
 } from "./rbac";
 
+const finalRoles = [
+  "super_admin",
+  "pastor",
+  "church_chair",
+  "prayer_team",
+  "secretary",
+  "editor",
+  "media",
+  "department_admin",
+] as const;
+
 describe("RBAC", () => {
-  it("memberi super admin akses penuh", () => {
+  it("memisahkan pengelolaan sistem dan kotak masuk doa", () => {
     expect(canAccess("super_admin", "settings.manage")).toBe(true);
-    expect(canAccess("super_admin", "prayers.private.read")).toBe(true);
+    expect(canAccess("super_admin", "monitoring.read")).toBe(true);
+    expect(canAccess("super_admin", "prayers.inbox.read")).toBe(false);
   });
 
-  it("membatasi admin departemen pada konten departemennya", () => {
-    expect(canAccess("department_admin", "ministries.manage")).toBe(true);
-    expect(canAccess("department_admin", "users.manage")).toBe(false);
-    expect(canAccess("department_admin", "prayers.read")).toBe(false);
+  it("memberi semua role hak kontribusi berita dan artikel", () => {
+    for (const role of finalRoles) {
+      expect(canAccess(role, "posts.manage")).toBe(true);
+    }
   });
 
-  it("membedakan akses tim doa dan pastoral", () => {
-    expect(canAccess("prayer_team", "prayers.read")).toBe(true);
-    expect(canAccess("prayer_team", "prayers.private.read")).toBe(false);
-    expect(canAccess("pastoral", "prayers.private.read")).toBe(true);
+
+  it("memisahkan hak kontribusi dan hak publikasi artikel", () => {
+    expect(canAccess("prayer_team", "posts.manage")).toBe(true);
+    expect(canAccess("prayer_team", "posts.publish")).toBe(false);
+    expect(canAccess("secretary", "posts.publish")).toBe(false);
+    expect(canAccess("media", "posts.publish")).toBe(false);
+
+    expect(canAccess("editor", "posts.review")).toBe(true);
+    expect(canAccess("editor", "posts.publish")).toBe(true);
+    expect(canAccess("pastor", "posts.publish")).toBe(true);
+    expect(canAccess("church_chair", "posts.publish")).toBe(true);
+    expect(canAccess("super_admin", "posts.delete_permanent")).toBe(true);
   });
 
-  it("hanya mengembalikan menu yang boleh dilihat role", () => {
-    const menus = getAllowedAdminMenu("pastoral" as AdminRole);
+  it("membatasi kotak masuk doa pada dua role penerima", () => {
+    expect(canAccess("prayer_team", "prayers.inbox.read")).toBe(true);
+    expect(canAccess("pastor", "prayers.inbox.read")).toBe(true);
+    expect(canAccess("church_chair", "prayers.inbox.read")).toBe(false);
+    expect(canAccess("editor", "prayers.inbox.read")).toBe(false);
+  });
+
+  it("menampilkan menu monitoring untuk Super Admin tanpa menu doa", () => {
+    const menus = getAllowedAdminMenu("super_admin");
+    expect(menus.some((menu) => menu.href === "/admin/monitoring")).toBe(true);
+    expect(
+      menus.some((menu) => menu.href === "/admin/permohonan-doa"),
+    ).toBe(false);
+  });
+
+  it("menampilkan kotak doa untuk Pendeta/Gembala", () => {
+    const menus = getAllowedAdminMenu("pastor");
     expect(
       menus.some((menu) => menu.href === "/admin/permohonan-doa"),
     ).toBe(true);
     expect(menus.some((menu) => menu.href === "/admin/pengguna")).toBe(false);
   });
 
-  it("menampilkan kotak pendaftaran untuk pengelola kegiatan", () => {
-    const menus = getAllowedAdminMenu("secretariat");
+  it("menampilkan pendaftaran untuk Sekretaris", () => {
+    const menus = getAllowedAdminMenu("secretary");
     expect(menus.some((menu) => menu.href === "/admin/pendaftaran")).toBe(
       true,
     );
   });
 
-  it("memilih role tertinggi dan mengabaikan nilai role yang tidak dikenal", () => {
-    expect(resolveHighestRole(["editor", "pastoral"])).toBe("pastoral");
-    expect(resolveHighestRole(["prayer_team"])).toBe("prayer_team");
+  it("memilih role final tertinggi dan mengabaikan role legacy", () => {
+    expect(resolveHighestRole(["editor", "pastor"])).toBe("pastor");
+    expect(resolveHighestRole(["church_chair", "prayer_team"])).toBe(
+      "church_chair",
+    );
     expect(resolveHighestRole(["department_admin", "super_admin"])).toBe(
       "super_admin",
     );
-    expect(resolveHighestRole(["unknown"])).toBeNull();
+    expect(resolveHighestRole(["pastoral", "secretariat"])).toBeNull();
   });
 });

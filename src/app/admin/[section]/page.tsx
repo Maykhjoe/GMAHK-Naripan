@@ -58,7 +58,7 @@ const sections: Record<string, { title: string; description: string }> = {
   "permohonan-doa": {
     title: "Permohonan Doa",
     description:
-      "Data privat. Akses mengikuti pilihan pemohon: tim doa dan pastoral, atau pastoral saja.",
+      "Data privat. Akses rutin hanya untuk Tim Pendoa Jemaat atau Pendeta/Gembala Jemaat sesuai pilihan pemohon.",
   },
   pengunjung: {
     title: "Pengunjung Baru",

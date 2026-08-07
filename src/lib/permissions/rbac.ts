@@ -1,25 +1,23 @@
-export type AdminRole =
-  | "super_admin"
-  | "web_administrator"
-  | "secretariat"
-  | "media_team"
-  | "editor"
-  | "pastoral"
-  | "prayer_team"
-  | "department_admin";
+import type { AdminRole } from "@/lib/permissions/roles";
+
+export type { AdminRole } from "@/lib/permissions/roles";
 
 export type Permission =
   | "dashboard.read"
+  | "monitoring.read"
   | "schedules.manage"
   | "events.manage"
   | "sermons.manage"
   | "livestreams.manage"
   | "posts.manage"
+  | "posts.review"
+  | "posts.publish"
+  | "posts.edit_all"
+  | "posts.delete_permanent"
   | "ministries.manage"
   | "leaders.manage"
   | "gallery.manage"
-  | "prayers.read"
-  | "prayers.private.read"
+  | "prayers.inbox.read"
   | "visitors.read"
   | "messages.read"
   | "files.manage"
@@ -27,59 +25,72 @@ export type Permission =
   | "appearance.manage"
   | "settings.manage";
 
+/**
+ * UI permission map. Database RLS and server authorization remain the source
+ * of truth. Prayer access is intentionally not inherited by Super Admin.
+ */
 export const rolePermissions: Record<AdminRole, (Permission | "*")[]> = {
   super_admin: ["*"],
-  web_administrator: [
+  pastor: [
     "dashboard.read",
     "schedules.manage",
     "events.manage",
     "sermons.manage",
-    "livestreams.manage",
     "posts.manage",
-    "ministries.manage",
+    "posts.review",
+    "posts.publish",
+    "posts.edit_all",
     "leaders.manage",
-    "gallery.manage",
-    "files.manage",
-    "users.manage",
-    "appearance.manage",
-    "settings.manage",
+    "prayers.inbox.read",
+    "visitors.read",
   ],
-  secretariat: [
+  church_chair: [
     "dashboard.read",
     "schedules.manage",
     "events.manage",
+    "posts.manage",
+    "posts.review",
+    "posts.publish",
+    "posts.edit_all",
+    "leaders.manage",
+    "visitors.read",
+  ],
+  prayer_team: [
+    "dashboard.read",
+    "posts.manage",
+    "prayers.inbox.read",
+  ],
+  secretary: [
+    "dashboard.read",
+    "schedules.manage",
+    "events.manage",
+    "posts.manage",
     "leaders.manage",
     "visitors.read",
     "messages.read",
     "files.manage",
   ],
-  media_team: [
+  editor: [
     "dashboard.read",
+    "posts.manage",
+    "posts.review",
+    "posts.publish",
+    "posts.edit_all",
+    "sermons.manage",
+    "events.manage",
+  ],
+  media: [
+    "dashboard.read",
+    "posts.manage",
     "sermons.manage",
     "livestreams.manage",
     "gallery.manage",
     "files.manage",
   ],
-  editor: [
-    "dashboard.read",
-    "posts.manage",
-    "sermons.manage",
-    "events.manage",
-  ],
-  pastoral: [
-    "dashboard.read",
-    "schedules.manage",
-    "sermons.manage",
-    "posts.manage",
-    "prayers.read",
-    "prayers.private.read",
-    "visitors.read",
-  ],
-  prayer_team: ["dashboard.read", "prayers.read"],
   department_admin: [
     "dashboard.read",
-    "events.manage",
     "posts.manage",
+    "events.manage",
     "ministries.manage",
     "gallery.manage",
   ],
@@ -87,6 +98,11 @@ export const rolePermissions: Record<AdminRole, (Permission | "*")[]> = {
 
 export const adminMenu = [
   { label: "Dashboard", href: "/admin", permission: "dashboard.read" },
+  {
+    label: "Monitoring Pelayanan",
+    href: "/admin/monitoring",
+    permission: "monitoring.read",
+  },
   {
     label: "Notifikasi",
     href: "/admin/notifikasi",
@@ -140,7 +156,7 @@ export const adminMenu = [
   {
     label: "Permohonan Doa",
     href: "/admin/permohonan-doa",
-    permission: "prayers.read",
+    permission: "prayers.inbox.read",
   },
   {
     label: "Pengunjung Baru",
@@ -178,7 +194,15 @@ export const adminMenu = [
   permission: Permission;
 }[];
 
+const superAdminExcludedPermissions = new Set<Permission>([
+  "prayers.inbox.read",
+]);
+
 export function canAccess(role: AdminRole, permission: Permission) {
+  if (role === "super_admin" && superAdminExcludedPermissions.has(permission)) {
+    return false;
+  }
+
   const permissions = rolePermissions[role];
   return (
     permissions.includes("*") ||
@@ -192,11 +216,11 @@ export function getAllowedAdminMenu(role: AdminRole) {
 
 const rolePriority: readonly AdminRole[] = [
   "super_admin",
-  "web_administrator",
-  "pastoral",
-  "secretariat",
-  "media_team",
+  "pastor",
+  "church_chair",
+  "secretary",
   "editor",
+  "media",
   "prayer_team",
   "department_admin",
 ];

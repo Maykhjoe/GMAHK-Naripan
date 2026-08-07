@@ -42,7 +42,7 @@ describe("validasi formulir publik", () => {
     expect(
       prayerRequestSchema.safeParse({
         ...base,
-        sharingScope: "pastoral_only",
+        sharingScope: "pastor",
       }).success,
     ).toBe(true);
     expect(
