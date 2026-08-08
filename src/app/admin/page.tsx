@@ -23,12 +23,20 @@ import {
 } from "@/lib/permissions/rbac";
 import { createClient } from "@/lib/supabase/server";
 
-type RoleRelation = {
-  roles:
-    | { code?: string; status?: string }
-    | { code?: string; status?: string }[]
-    | null;
+type AdminContextRow = {
+  role_codes?: string[] | null;
+  ministry_ids?: string[] | null;
+  is_active?: boolean | null;
 };
+
+function firstContextRow(value: unknown): AdminContextRow | null {
+  if (Array.isArray(value)) {
+    const first = value[0];
+    return first && typeof first === "object" ? (first as AdminContextRow) : null;
+  }
+
+  return value && typeof value === "object" ? (value as AdminContextRow) : null;
+}
 
 type Metric = {
   label: string;
@@ -46,9 +54,12 @@ function jakartaDate(value: string) {
   }).format(new Date(value));
 }
 
+const EMPTY_SCOPE_UUID = "00000000-0000-0000-0000-000000000000";
+
 export default async function AdminDashboard() {
   const supabase = await createClient();
   let role: AdminRole = "super_admin";
+  let ministryIds: string[] = [];
   let metrics: Metric[] = [];
   let events: { id: string; title: string; starts_at: string }[] = [];
   let logs: {
@@ -64,24 +75,39 @@ export default async function AdminDashboard() {
     } = await supabase.auth.getUser();
 
     if (user) {
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("roles(code,status)")
-        .eq("user_id", user.id);
+      const { data: contextData } = await supabase.rpc("get_my_admin_context");
+      const context = firstContextRow(contextData);
 
-      const codes = ((roleData ?? []) as RoleRelation[])
-        .flatMap((item) =>
-          Array.isArray(item.roles)
-            ? item.roles
-            : item.roles
-              ? [item.roles]
-              : [],
-        )
-        .filter((item) => item.status === "active")
-        .map((item) => item.code)
-        .filter((code): code is string => Boolean(code));
+      role = resolveHighestRole(context?.role_codes ?? []) ?? role;
+      ministryIds = context?.ministry_ids ?? [];
+    }
 
-      role = resolveHighestRole(codes) ?? role;
+    const departmentScope =
+      role === "department_admin"
+        ? ministryIds.length > 0
+          ? ministryIds
+          : [EMPTY_SCOPE_UUID]
+        : null;
+
+    let eventCountQuery = supabase
+      .from("events")
+      .select("id", { count: "exact", head: true })
+      .is("deleted_at", null);
+
+    if (departmentScope) {
+      eventCountQuery = eventCountQuery.in("ministry_id", departmentScope);
+    }
+
+    let registrationCountQuery = supabase
+      .from("event_registrations")
+      .select("id,event:events!inner(ministry_id)", { count: "exact", head: true })
+      .eq("status", "registered");
+
+    if (departmentScope) {
+      registrationCountQuery = registrationCountQuery.in(
+        "event.ministry_id",
+        departmentScope,
+      );
     }
 
     const [
@@ -102,10 +128,7 @@ export default async function AdminDashboard() {
           .select("id", { count: "exact", head: true })
           .eq("status", "pending_review")
           .is("deleted_at", null),
-        supabase
-          .from("events")
-          .select("id", { count: "exact", head: true })
-          .is("deleted_at", null),
+        eventCountQuery,
         supabase
           .from("sermons")
           .select("id", { count: "exact", head: true })
@@ -120,10 +143,7 @@ export default async function AdminDashboard() {
           .select("id", { count: "exact", head: true })
           .eq("status", "unread")
           .is("deleted_at", null),
-        supabase
-          .from("event_registrations")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "registered"),
+        registrationCountQuery,
       ]);
 
     const candidateMetrics: Metric[] = [
@@ -208,13 +228,17 @@ export default async function AdminDashboard() {
     }
 
     if (canAccess(role, "events.manage")) {
-      const upcoming = await supabase
+      let upcomingQuery = supabase
         .from("events")
         .select("id,title,starts_at")
         .gte("starts_at", new Date().toISOString())
-        .is("deleted_at", null)
-        .order("starts_at")
-        .limit(3);
+        .is("deleted_at", null);
+
+      if (departmentScope) {
+        upcomingQuery = upcomingQuery.in("ministry_id", departmentScope);
+      }
+
+      const upcoming = await upcomingQuery.order("starts_at").limit(3);
       events = upcoming.data ?? [];
     }
 

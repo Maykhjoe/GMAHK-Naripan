@@ -21,6 +21,9 @@ describe("admin user validation", () => {
           email: `${role}@example.com`,
           fullName: "Admin Naripan",
           role,
+          ...(role === "department_admin"
+            ? { ministryId: "22222222-2222-4222-8222-222222222222" }
+            : {}),
         }).success,
       ).toBe(true);
     }
@@ -36,6 +39,23 @@ describe("admin user validation", () => {
         }).success,
       ).toBe(false);
     }
+  });
+
+  it("requires a ministry assignment for Admin Departemen", () => {
+    expect(
+      adminInviteSchema.safeParse({
+        email: "departemen@example.com",
+        fullName: "Admin Departemen",
+        role: "department_admin",
+      }).success,
+    ).toBe(false);
+
+    expect(
+      adminUserUpdateSchema.safeParse({
+        role: "department_admin",
+        ministryId: "22222222-2222-4222-8222-222222222222",
+      }).success,
+    ).toBe(true);
   });
 
   it("only accepts explicit user status values", () => {

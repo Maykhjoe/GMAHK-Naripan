@@ -24,6 +24,16 @@ describe("RBAC", () => {
     expect(canAccess("super_admin", "prayers.inbox.read")).toBe(false);
   });
 
+  it("mengunci pengelolaan sistem kepada Super Admin", () => {
+    for (const role of finalRoles.filter((role) => role !== "super_admin")) {
+      expect(canAccess(role, "users.manage")).toBe(false);
+      expect(canAccess(role, "settings.manage")).toBe(false);
+      expect(canAccess(role, "appearance.manage")).toBe(false);
+      expect(canAccess(role, "monitoring.read")).toBe(false);
+      expect(canAccess(role, "posts.delete_permanent")).toBe(false);
+    }
+  });
+
   it("memberi semua role hak kontribusi berita dan artikel", () => {
     for (const role of finalRoles) {
       expect(canAccess(role, "posts.manage")).toBe(true);

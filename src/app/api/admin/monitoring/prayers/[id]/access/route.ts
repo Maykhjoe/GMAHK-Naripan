@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import {
   isAuthorizationFailure,
-  requireAdminPermission,
+  requireSuperAdmin,
   validateMutationOrigin,
 } from "@/lib/admin/auth";
 
@@ -27,7 +27,7 @@ export async function POST(
     );
   }
 
-  const auth = await requireAdminPermission("monitoring.read");
+  const auth = await requireSuperAdmin();
 
   if (isAuthorizationFailure(auth)) {
     return auth;

@@ -7,10 +7,17 @@ import {
   validateMutationOrigin,
 } from "@/lib/admin/auth";
 import {
+  getResourceCapabilities,
+  getResourceScope,
+  resourceOperationMessage,
+  type AdminResourceOperation,
+} from "@/lib/admin/access-control";
+import {
   getArticleWorkflowCapabilities,
   isArticleWorkflowStatus,
 } from "@/lib/admin/article-workflow";
 import { prepareResourcePayload } from "@/lib/admin/resource-payload";
+import { recordSecurityAudit } from "@/lib/admin/security-audit";
 import {
   getAdminResource,
   parseResourcePayload,
@@ -21,6 +28,7 @@ const uuidSchema = z.uuid();
 async function context(
   request: Request,
   params: Promise<{ resource: string; id: string }>,
+  operation: AdminResourceOperation,
 ) {
   const { resource: section, id } = await params;
   const resource = getAdminResource(section);
@@ -58,7 +66,41 @@ async function context(
     return { response: auth };
   }
 
-  return { section, id, resource, auth };
+  const capabilities = getResourceCapabilities(section, resource, auth);
+  const allowed =
+    operation === "read"
+      ? capabilities.canRead
+      : operation === "create"
+        ? capabilities.canCreate
+        : operation === "update"
+          ? capabilities.canUpdate
+          : capabilities.canDelete;
+
+  if (!allowed) {
+    await recordSecurityAudit({
+      actorId: auth.user.id,
+      action: "access_denied",
+      entityType: "admin_resource",
+      entityId: id,
+      details: { resource: section, operation },
+    });
+
+    return {
+      response: NextResponse.json(
+        { message: resourceOperationMessage(section, operation, auth, capabilities) },
+        { status: 403 },
+      ),
+    };
+  }
+
+  return {
+    section,
+    id,
+    resource,
+    auth,
+    capabilities,
+    scope: getResourceScope(section, auth),
+  };
 }
 
 export async function GET(
@@ -88,6 +130,24 @@ export async function GET(
     return auth;
   }
 
+  const capabilities = getResourceCapabilities(section, resource, auth);
+  const scope = getResourceScope(section, auth);
+
+  if (!capabilities.canRead) {
+    await recordSecurityAudit({
+      actorId: auth.user.id,
+      action: "access_denied",
+      entityType: "admin_resource",
+      entityId: id,
+      details: { resource: section, operation: "read" },
+    });
+
+    return NextResponse.json(
+      { message: resourceOperationMessage(section, "read", auth, capabilities) },
+      { status: 403 },
+    );
+  }
+
   let query = auth.supabase
     .from(resource.table)
     .select("*")
@@ -95,6 +155,12 @@ export async function GET(
 
   if (resource.softDelete) {
     query = query.is("deleted_at", null);
+  }
+
+  if (scope.kind === "owner") {
+    query = query.eq(scope.column, auth.user.id);
+  } else if (scope.kind === "ministry") {
+    query = query.in(scope.column, scope.ministryIds);
   }
 
   if (section === "berita") {
@@ -139,7 +205,7 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ resource: string; id: string }> },
 ) {
-  const ctx = await context(request, params);
+  const ctx = await context(request, params, "update");
 
   if ("response" in ctx) {
     return ctx.response;
@@ -204,6 +270,12 @@ export async function PATCH(
       currentQuery = currentQuery.is("deleted_at", null);
     }
 
+    if (ctx.scope.kind === "owner") {
+      currentQuery = currentQuery.eq(ctx.scope.column, ctx.auth.user.id);
+    } else if (ctx.scope.kind === "ministry") {
+      currentQuery = currentQuery.in(ctx.scope.column, ctx.scope.ministryIds);
+    }
+
     const { data: current, error: currentError } =
       await currentQuery.maybeSingle();
 
@@ -226,7 +298,7 @@ export async function PATCH(
       );
     }
 
-    currentRecord = current as Record<string, unknown>;
+    currentRecord = current as unknown as Record<string, unknown>;
   }
 
   const payload = prepareResourcePayload(
@@ -344,12 +416,18 @@ export async function PATCH(
     );
   }
 
-  const { data, error } = await ctx.auth.supabase
+  let updateQuery = ctx.auth.supabase
     .from(ctx.resource.table)
     .update(payload)
-    .eq("id", ctx.id)
-    .select()
-    .single();
+    .eq("id", ctx.id);
+
+  if (ctx.scope.kind === "owner") {
+    updateQuery = updateQuery.eq(ctx.scope.column, ctx.auth.user.id);
+  } else if (ctx.scope.kind === "ministry") {
+    updateQuery = updateQuery.in(ctx.scope.column, ctx.scope.ministryIds);
+  }
+
+  const { data, error } = await updateQuery.select().maybeSingle();
 
   if (error) {
     console.error(`[admin:${ctx.section}] update failed`, {
@@ -366,6 +444,13 @@ export async function PATCH(
     );
   }
 
+  if (!data) {
+    return NextResponse.json(
+      { message: "Data tidak ditemukan atau tidak dapat diakses" },
+      { status: 404 },
+    );
+  }
+
   return NextResponse.json({ data });
 }
 
@@ -373,7 +458,7 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ resource: string; id: string }> },
 ) {
-  const ctx = await context(request, params);
+  const ctx = await context(request, params, "delete");
 
   if ("response" in ctx) {
     return ctx.response;
@@ -384,12 +469,26 @@ export async function DELETE(
       ctx.auth.supabase,
       ctx.auth.user.id,
     );
-    const { data: current, error: currentError } = await ctx.auth.supabase
+    let currentArticleQuery = ctx.auth.supabase
       .from("posts")
       .select("created_by,status")
       .eq("id", ctx.id)
-      .is("deleted_at", null)
-      .maybeSingle();
+      .is("deleted_at", null);
+
+    if (ctx.scope.kind === "owner") {
+      currentArticleQuery = currentArticleQuery.eq(
+        ctx.scope.column,
+        ctx.auth.user.id,
+      );
+    } else if (ctx.scope.kind === "ministry") {
+      currentArticleQuery = currentArticleQuery.in(
+        ctx.scope.column,
+        ctx.scope.ministryIds,
+      );
+    }
+
+    const { data: current, error: currentError } =
+      await currentArticleQuery.maybeSingle();
 
     if (currentError) {
       return NextResponse.json(
@@ -439,7 +538,7 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   }
 
-  const operation = ctx.resource.softDelete
+  let operation = ctx.resource.softDelete
     ? ctx.auth.supabase
         .from(ctx.resource.table)
         .update({
@@ -447,17 +546,27 @@ export async function DELETE(
           status: "inactive",
         })
         .eq("id", ctx.id)
-    : ctx.auth.supabase
-        .from(ctx.resource.table)
-        .delete()
-        .eq("id", ctx.id);
+    : ctx.auth.supabase.from(ctx.resource.table).delete().eq("id", ctx.id);
 
-  const { error } = await operation;
+  if (ctx.scope.kind === "owner") {
+    operation = operation.eq(ctx.scope.column, ctx.auth.user.id);
+  } else if (ctx.scope.kind === "ministry") {
+    operation = operation.in(ctx.scope.column, ctx.scope.ministryIds);
+  }
+
+  const { data, error } = await operation.select("id").maybeSingle();
 
   if (error) {
     return NextResponse.json(
       { message: "Data tidak dapat dihapus" },
       { status: 500 },
+    );
+  }
+
+  if (!data) {
+    return NextResponse.json(
+      { message: "Data tidak ditemukan atau tidak dapat diakses" },
+      { status: 404 },
     );
   }
 

@@ -4,6 +4,7 @@ import {
   isAuthorizationFailure,
   requireAdminPermission,
 } from "@/lib/admin/auth";
+import { getDepartmentEventIds } from "@/lib/admin/access-control";
 import { getSubmissionConfig } from "@/lib/admin/submissions";
 
 function escapedSearch(value: string) {
@@ -36,6 +37,36 @@ export async function GET(
     50,
     Math.max(10, Number(url.searchParams.get("pageSize")) || 20),
   );
+
+  if (
+    config.kind === "registration" &&
+    auth.primaryRole === "department_admin" &&
+    !auth.isSuperAdmin &&
+    auth.ministryIds.length === 0
+  ) {
+    return NextResponse.json(
+      { message: "Akun Admin Departemen belum ditugaskan ke departemen" },
+      { status: 403 },
+    );
+  }
+
+  let departmentEventIds: string[] | null = null;
+
+  if (config.kind === "registration") {
+    try {
+      departmentEventIds = await getDepartmentEventIds(auth);
+    } catch {
+      return NextResponse.json(
+        { message: "Scope kegiatan departemen tidak dapat diverifikasi" },
+        { status: 500 },
+      );
+    }
+
+    if (departmentEventIds?.length === 0) {
+      return NextResponse.json({ data: [], count: 0, page, pageSize });
+    }
+  }
+
   const search = url.searchParams.get("search")?.trim();
   const status = url.searchParams.get("status")?.trim();
   const from = (page - 1) * pageSize;
@@ -52,6 +83,10 @@ export async function GET(
 
   if (config.hasSoftDelete) {
     query = query.is("deleted_at", null);
+  }
+
+  if (departmentEventIds) {
+    query = query.in("event_id", departmentEventIds);
   }
 
   if (search) {

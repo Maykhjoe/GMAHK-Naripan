@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import {
   isAuthorizationFailure,
-  requireAdminPermission,
+  requireSuperAdmin,
   validateMutationOrigin,
 } from "@/lib/admin/auth";
 import { SITE_CONFIG_KEY } from "@/lib/data/site-settings";
@@ -124,7 +124,7 @@ function parseSettings(body: unknown) {
 }
 
 export async function GET() {
-  const auth = await requireAdminPermission("settings.manage");
+  const auth = await requireSuperAdmin();
 
   if (isAuthorizationFailure(auth)) {
     return auth;
@@ -157,7 +157,7 @@ export async function PUT(request: Request) {
     );
   }
 
-  const auth = await requireAdminPermission("settings.manage");
+  const auth = await requireSuperAdmin();
 
   if (isAuthorizationFailure(auth)) {
     return auth;

@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import {
   isAuthorizationFailure,
-  requireAdminPermission,
+  requireSuperAdmin,
 } from "@/lib/admin/auth";
 
 const querySchema = z.object({
@@ -16,7 +16,7 @@ const querySchema = z.object({
 });
 
 export async function GET(request: Request) {
-  const auth = await requireAdminPermission("monitoring.read");
+  const auth = await requireSuperAdmin();
 
   if (isAuthorizationFailure(auth)) {
     return auth;

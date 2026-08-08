@@ -7,11 +7,17 @@ import {
   validateMutationOrigin,
 } from "@/lib/admin/auth";
 import {
+  getResourceCapabilities,
+  getResourceScope,
+  resourceOperationMessage,
+} from "@/lib/admin/access-control";
+import {
   getArticleWorkflowCapabilities,
   isArticleWorkflowStatus,
 } from "@/lib/admin/article-workflow";
 import { prepareResourcePayload } from "@/lib/admin/resource-payload";
 import { specialWorshipCategories } from "@/lib/constants/worship-schedules";
+import { recordSecurityAudit } from "@/lib/admin/security-audit";
 import {
   getAdminResource,
   parseResourcePayload,
@@ -82,6 +88,23 @@ export async function GET(
     return auth;
   }
 
+  const capabilities = getResourceCapabilities(section, resource, auth);
+  const scope = getResourceScope(section, auth);
+
+  if (!capabilities.canRead) {
+    await recordSecurityAudit({
+      actorId: auth.user.id,
+      action: "access_denied",
+      entityType: "admin_resource",
+      details: { resource: section, operation: "read" },
+    });
+
+    return NextResponse.json(
+      { message: resourceOperationMessage(section, "read", auth, capabilities) },
+      { status: 403 },
+    );
+  }
+
   const workflow =
     section === "berita"
       ? await getArticleWorkflowCapabilities(auth.supabase, auth.user.id)
@@ -107,6 +130,12 @@ export async function GET(
 
   if (resource.softDelete) {
     query = query.is("deleted_at", null);
+  }
+
+  if (scope.kind === "owner") {
+    query = query.eq(scope.column, auth.user.id);
+  } else if (scope.kind === "ministry") {
+    query = query.in(scope.column, scope.ministryIds);
   }
 
   // Contributors see their own article workflow. Reviewers/editors can see all
@@ -189,6 +218,7 @@ export async function GET(
     count: count ?? 0,
     page,
     pageSize,
+    capabilities,
     ...(workflow ? { workflow } : {}),
   });
 }
@@ -225,6 +255,23 @@ export async function POST(
 
   if (isAuthorizationFailure(auth)) {
     return auth;
+  }
+
+  const capabilities = getResourceCapabilities(section, resource, auth);
+  const scope = getResourceScope(section, auth);
+
+  if (!capabilities.canCreate) {
+    await recordSecurityAudit({
+      actorId: auth.user.id,
+      action: "access_denied",
+      entityType: "admin_resource",
+      details: { resource: section, operation: "create" },
+    });
+
+    return NextResponse.json(
+      { message: resourceOperationMessage(section, "create", auth, capabilities) },
+      { status: resource.createEnabled === false || resource.readOnly ? 405 : 403 },
+    );
   }
 
   let body: unknown;
@@ -270,6 +317,17 @@ export async function POST(
     parsed.data as Record<string, unknown>,
     "create",
   );
+
+  if (scope.kind === "ministry" && scope.column === "ministry_id") {
+    if (scope.ministryIds.length !== 1) {
+      return NextResponse.json(
+        { message: "Penugasan departemen akun tidak valid untuk membuat data" },
+        { status: 409 },
+      );
+    }
+
+    payload.ministry_id = scope.ministryIds[0];
+  }
 
   if (resource.slugSource && typeof payload.slug === "string") {
     try {

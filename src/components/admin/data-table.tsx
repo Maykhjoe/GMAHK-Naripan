@@ -28,6 +28,7 @@ import type {
 } from "@/lib/admin/resources";
 import { articleStatusLabel } from "@/lib/admin/article-workflow";
 import type { ArticleWorkflowCapabilities } from "@/lib/admin/article-workflow";
+import type { ResourceCapabilities } from "@/lib/admin/access-control";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -128,6 +129,13 @@ export function DataTable({ resource }: { resource: AdminResource }) {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<SelectOption[]>([]);
   const [workflow, setWorkflow] = useState<ArticleWorkflowCapabilities | null>(null);
+  const [capabilities, setCapabilities] = useState<ResourceCapabilities>({
+    canRead: true,
+    canCreate: resource.createEnabled !== false && resource.readOnly !== true,
+    canUpdate: resource.readOnly !== true,
+    canDelete: resource.readOnly !== true,
+    scope: "all",
+  });
 
   const statusField = resource.fields.find((field) => field.key === "status");
   const statusOptions = (statusField?.options ?? []).map(optionValue);
@@ -186,6 +194,13 @@ export function DataTable({ resource }: { resource: AdminResource }) {
       setRows([]);
       setCount(0);
       setWorkflow(null);
+      setCapabilities((current) => ({
+        ...current,
+        canRead: false,
+        canCreate: false,
+        canUpdate: false,
+        canDelete: false,
+      }));
       setError(result.message ?? "Data tidak dapat dimuat");
       setLoading(false);
       return;
@@ -194,6 +209,9 @@ export function DataTable({ resource }: { resource: AdminResource }) {
     setRows(result.data ?? []);
     setCount(result.count ?? 0);
     setWorkflow(result.workflow ?? null);
+    if (result.capabilities) {
+      setCapabilities(result.capabilities as ResourceCapabilities);
+    }
     setLoading(false);
   }, [
     category,
@@ -444,7 +462,7 @@ export function DataTable({ resource }: { resource: AdminResource }) {
                 </Button>
               )}
 
-              {resource.createEnabled !== false && (
+              {resource.createEnabled !== false && capabilities.canCreate && (
                 <Button type="button" onClick={openCreate}>
                   <Plus className="size-4" aria-hidden="true" />
                   Tambah
@@ -622,12 +640,13 @@ export function DataTable({ resource }: { resource: AdminResource }) {
                     isArticle &&
                     !workflow?.canEditAll &&
                     (!isOwner || row.status === "published");
-                  const canEditRow = !articleLocked;
+                  const canEditRow = capabilities.canUpdate && !articleLocked;
                   const canArchiveRow =
-                    !isArticle ||
+                    capabilities.canDelete &&
+                    (!isArticle ||
                     (row.status !== "archived" &&
                       (Boolean(workflow?.canEditAll) ||
-                        (isOwner && row.status !== "published")));
+                        (isOwner && row.status !== "published"))));
 
                   return (
                     <tr key={row.id} className="hover:bg-cream/50">

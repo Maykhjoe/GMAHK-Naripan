@@ -92,6 +92,8 @@ const sections: Record<string, { title: string; description: string }> = {
   },
 };
 
+const superAdminSections = new Set(["pengguna", "tampilan", "pengaturan"]);
+
 const specialPermissions: Partial<Record<string, Permission>> = {
   file: "files.manage",
   pengguna: "users.manage",
@@ -126,7 +128,16 @@ export default async function AdminSection({
   const permission = resource?.permission ?? specialPermissions[section];
   const supabase = await createClient();
 
-  if (supabase && permission) {
+  if (supabase && superAdminSections.has(section)) {
+    const { data: isSuperAdmin, error } = await supabase.rpc(
+      "has_active_role",
+      { target_role_code: "super_admin" },
+    );
+
+    if (error || !isSuperAdmin) {
+      redirect("/auth/unauthorized");
+    }
+  } else if (supabase && permission) {
     const { data: allowed, error } = await supabase.rpc("has_permission", {
       permission_code: permission,
     });

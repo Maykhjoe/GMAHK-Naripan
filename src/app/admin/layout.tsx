@@ -1,10 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
-import {
-  resolveHighestRole,
-  type AdminRole,
-} from "@/lib/permissions/rbac";
+import { resolveHighestRole, type AdminRole } from "@/lib/permissions/rbac";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = {
@@ -15,12 +12,19 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
-type RoleRelation = {
-  roles:
-    | { code?: string; status?: string }
-    | { code?: string; status?: string }[]
-    | null;
+type AdminContextRow = {
+  role_codes?: string[] | null;
+  is_active?: boolean | null;
 };
+
+function firstContextRow(value: unknown): AdminContextRow | null {
+  if (Array.isArray(value)) {
+    const first = value[0];
+    return first && typeof first === "object" ? (first as AdminContextRow) : null;
+  }
+
+  return value && typeof value === "object" ? (value as AdminContextRow) : null;
+}
 
 export default async function AdminLayout({
   children,
@@ -39,28 +43,23 @@ export default async function AdminLayout({
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) redirect("/auth/login");
+    if (!user) {
+      redirect("/auth/login");
+    }
 
-    const { data } = await supabase
-      .from("user_roles")
-      .select("roles(code,status)")
-      .eq("user_id", user.id);
+    const { data, error } = await supabase.rpc("get_my_admin_context");
+    const context = firstContextRow(data);
 
-    const codes = ((data ?? []) as RoleRelation[])
-      .flatMap((item) =>
-        Array.isArray(item.roles)
-          ? item.roles
-          : item.roles
-            ? [item.roles]
-            : [],
-      )
-      .filter((item) => item.status === "active")
-      .map((item) => item.code)
-      .filter((code): code is string => Boolean(code));
+    if (error || !context || context.is_active !== true) {
+      redirect("/auth/unauthorized");
+    }
 
-    const assignedRole = resolveHighestRole(codes);
+    const assignedRole = resolveHighestRole(context.role_codes ?? []);
 
-    if (!assignedRole) redirect("/auth/unauthorized");
+    if (!assignedRole) {
+      redirect("/auth/unauthorized");
+    }
+
     role = assignedRole;
   }
 

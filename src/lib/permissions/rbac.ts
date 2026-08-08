@@ -198,7 +198,19 @@ const superAdminExcludedPermissions = new Set<Permission>([
   "prayers.inbox.read",
 ]);
 
+const superAdminOnlyPermissions = new Set<Permission>([
+  "monitoring.read",
+  "users.manage",
+  "appearance.manage",
+  "settings.manage",
+  "posts.delete_permanent",
+]);
+
 export function canAccess(role: AdminRole, permission: Permission) {
+  if (role !== "super_admin" && superAdminOnlyPermissions.has(permission)) {
+    return false;
+  }
+
   if (role === "super_admin" && superAdminExcludedPermissions.has(permission)) {
     return false;
   }
