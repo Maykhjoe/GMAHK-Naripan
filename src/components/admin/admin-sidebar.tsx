@@ -16,6 +16,7 @@ import {
   Menu,
   MessageSquare,
   Radio,
+  ScrollText,
   Settings,
   ShieldCheck,
   Users,
@@ -54,6 +55,7 @@ const iconMap: Record<string, LucideIcon> = {
   "/admin/pengguna": Users,
   "/admin/tampilan": Settings,
   "/admin/pengaturan": Settings,
+  "/admin/audit-log": ScrollText,
 };
 
 export function AdminSidebar({ role = "super_admin" }: { role?: AdminRole }) {

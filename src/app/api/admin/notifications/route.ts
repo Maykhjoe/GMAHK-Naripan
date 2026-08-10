@@ -7,6 +7,7 @@ import {
   validateMutationOrigin,
 } from "@/lib/admin/auth";
 import { parseNotificationListParams } from "@/lib/admin/notifications";
+import { enforceRateLimit } from "@/lib/security/enforce-rate-limit";
 
 const mutationSchema = z.object({
   id: z.uuid().optional(),
@@ -30,6 +31,13 @@ export async function GET(request: Request) {
   if (isAuthorizationFailure(auth)) {
     return auth;
   }
+
+  const limited = await enforceRateLimit({
+    key: `admin-notifications-read:${auth.user.id}`,
+    limit: 120,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
 
   const { error: reminderError } = await auth.supabase.rpc(
     "refresh_my_admin_reminders",
@@ -140,6 +148,13 @@ export async function PATCH(request: Request) {
   if (isAuthorizationFailure(auth)) {
     return auth;
   }
+
+  const limited = await enforceRateLimit({
+    key: `admin-notifications-write:${auth.user.id}`,
+    limit: 60,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
 
   const body = await request.json().catch(() => ({}));
   const parsed = mutationSchema.safeParse(body);
@@ -259,6 +274,13 @@ export async function DELETE(request: Request) {
   if (isAuthorizationFailure(auth)) {
     return auth;
   }
+
+  const limited = await enforceRateLimit({
+    key: `admin-notifications-write:${auth.user.id}`,
+    limit: 60,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
 
   const body = await request.json().catch(() => ({}));
   const parsed = deleteSchema.safeParse(body);

@@ -75,7 +75,7 @@ export function getResourceCapabilities(
 
   const mutable = resource.readOnly !== true;
   let canCreate = mutable && resource.createEnabled !== false;
-  let canUpdate = mutable;
+  const canUpdate = mutable;
   let canDelete = mutable;
 
   if (auth.primaryRole === "department_admin" && !auth.isSuperAdmin) {

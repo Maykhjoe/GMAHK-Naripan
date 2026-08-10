@@ -21,6 +21,7 @@ describe("RBAC", () => {
   it("memisahkan pengelolaan sistem dan kotak masuk doa", () => {
     expect(canAccess("super_admin", "settings.manage")).toBe(true);
     expect(canAccess("super_admin", "monitoring.read")).toBe(true);
+    expect(canAccess("super_admin", "audit.read")).toBe(true);
     expect(canAccess("super_admin", "prayers.inbox.read")).toBe(false);
   });
 
@@ -30,6 +31,7 @@ describe("RBAC", () => {
       expect(canAccess(role, "settings.manage")).toBe(false);
       expect(canAccess(role, "appearance.manage")).toBe(false);
       expect(canAccess(role, "monitoring.read")).toBe(false);
+      expect(canAccess(role, "audit.read")).toBe(false);
       expect(canAccess(role, "posts.delete_permanent")).toBe(false);
     }
   });
@@ -64,6 +66,7 @@ describe("RBAC", () => {
   it("menampilkan menu monitoring untuk Super Admin tanpa menu doa", () => {
     const menus = getAllowedAdminMenu("super_admin");
     expect(menus.some((menu) => menu.href === "/admin/monitoring")).toBe(true);
+    expect(menus.some((menu) => menu.href === "/admin/audit-log")).toBe(true);
     expect(
       menus.some((menu) => menu.href === "/admin/permohonan-doa"),
     ).toBe(false);

@@ -18,6 +18,7 @@ import {
 import { prepareResourcePayload } from "@/lib/admin/resource-payload";
 import { specialWorshipCategories } from "@/lib/constants/worship-schedules";
 import { recordSecurityAudit } from "@/lib/admin/security-audit";
+import { enforceRateLimit } from "@/lib/security/enforce-rate-limit";
 import {
   getAdminResource,
   parseResourcePayload,
@@ -87,6 +88,14 @@ export async function GET(
   if (isAuthorizationFailure(auth)) {
     return auth;
   }
+
+  const limited = await enforceRateLimit({
+    key: `admin-resource-list:${section}:${auth.user.id}`,
+    limit: 180,
+    windowMs: 60_000,
+    message: "Terlalu banyak permintaan data. Silakan tunggu sebentar.",
+  });
+  if (limited) return limited;
 
   const capabilities = getResourceCapabilities(section, resource, auth);
   const scope = getResourceScope(section, auth);

@@ -23,7 +23,8 @@ export type Permission =
   | "files.manage"
   | "users.manage"
   | "appearance.manage"
-  | "settings.manage";
+  | "settings.manage"
+  | "audit.read";
 
 /**
  * UI permission map. Database RLS and server authorization remain the source
@@ -184,6 +185,11 @@ export const adminMenu = [
     permission: "appearance.manage",
   },
   {
+    label: "Audit Log",
+    href: "/admin/audit-log",
+    permission: "audit.read",
+  },
+  {
     label: "Pengaturan",
     href: "/admin/pengaturan",
     permission: "settings.manage",
@@ -203,6 +209,7 @@ const superAdminOnlyPermissions = new Set<Permission>([
   "users.manage",
   "appearance.manage",
   "settings.manage",
+  "audit.read",
   "posts.delete_permanent",
 ]);
 

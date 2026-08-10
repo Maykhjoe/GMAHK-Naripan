@@ -1,4 +1,9 @@
 import { handlePublicForm } from "@/lib/api/public-form";
+import {
+  normalizeEmail,
+  normalizePhone,
+  normalizePlainText,
+} from "@/lib/security/normalize";
 import { contactSchema, type ContactInput } from "@/lib/validations/forms";
 
 export async function POST(request: Request) {
@@ -8,17 +13,16 @@ export async function POST(request: Request) {
     "contact_messages",
     (value) => {
       const data = value as ContactInput;
-
       return {
-        name: data.name,
-        email: data.email,
-        phone: data.phone || null,
-        subject: data.subject,
-        message: data.message,
+        name: normalizePlainText(data.name),
+        email: normalizeEmail(data.email),
+        phone: normalizePhone(data.phone),
+        subject: normalizePlainText(data.subject),
+        message: normalizePlainText(data.message),
         consent_at: new Date().toISOString(),
         status: "unread",
       };
     },
-    { turnstileAction: "contact" },
+    { turnstileAction: "contact", limit: 5, windowMs: 10 * 60_000 },
   );
 }
