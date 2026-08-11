@@ -14,6 +14,30 @@ type SiteConfig = {
 
 type BreadcrumbItem = { name: string; path: string };
 
+type ArticleSeoInput = Post & {
+  publishedAt?: string;
+  updatedAt?: string;
+};
+
+type SermonSeoInput = Sermon & {
+  publishedAt?: string;
+  updatedAt?: string;
+};
+
+type EventSeoInput = EventItem & {
+  zoomUrl?: string | null;
+  youtubeUrl?: string | null;
+};
+
+type MinistrySeoInput = {
+  slug: string;
+  name: string;
+  shortDescription: string;
+  image?: string | null;
+  coordinator?: string | null;
+  email?: string | null;
+};
+
 const INDONESIAN_MONTHS: Record<string, string> = {
   Januari: "01",
   Februari: "02",
@@ -108,7 +132,7 @@ export function createWebsiteJsonLd(site: SiteConfig) {
   };
 }
 
-export function createEventJsonLd(event: EventItem, site: SiteConfig) {
+export function createEventJsonLd(event: EventSeoInput, site: SiteConfig) {
   const url = absoluteUrl(site.url, `/kegiatan/${event.slug}`);
   return {
     "@context": "https://schema.org",
@@ -122,7 +146,10 @@ export function createEventJsonLd(event: EventItem, site: SiteConfig) {
     eventStatus: event.isPast
       ? "https://schema.org/EventCompleted"
       : "https://schema.org/EventScheduled",
-    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    eventAttendanceMode:
+      event.zoomUrl || event.youtubeUrl
+        ? "https://schema.org/MixedEventAttendanceMode"
+        : "https://schema.org/OfflineEventAttendanceMode",
     location: { "@type": "Place", name: event.location },
     organizer: { "@id": `${baseUrl(site.url)}/#church` },
     url,
@@ -138,7 +165,7 @@ export function createEventJsonLd(event: EventItem, site: SiteConfig) {
   };
 }
 
-export function createArticleJsonLd(post: Post, site: SiteConfig) {
+export function createArticleJsonLd(post: ArticleSeoInput, site: SiteConfig) {
   const url = absoluteUrl(site.url, `/berita/${post.slug}`);
   return {
     "@context": "https://schema.org",
@@ -147,8 +174,9 @@ export function createArticleJsonLd(post: Post, site: SiteConfig) {
     headline: post.title,
     description: post.excerpt,
     image: [post.image],
-    datePublished: normalizeIndonesianDate(post.date),
-    dateModified: normalizeIndonesianDate(post.date),
+    datePublished: post.publishedAt || normalizeIndonesianDate(post.date),
+    dateModified:
+      post.updatedAt || post.publishedAt || normalizeIndonesianDate(post.date),
     inLanguage: "id-ID",
     author: { "@type": "Organization", name: post.author },
     publisher: { "@id": `${baseUrl(site.url)}/#church` },
@@ -156,7 +184,7 @@ export function createArticleJsonLd(post: Post, site: SiteConfig) {
   };
 }
 
-export function createSermonJsonLd(sermon: Sermon, site: SiteConfig) {
+export function createSermonJsonLd(sermon: SermonSeoInput, site: SiteConfig) {
   const url = absoluteUrl(site.url, `/khotbah/${sermon.slug}`);
   const base = {
     "@context": "https://schema.org",
@@ -164,7 +192,7 @@ export function createSermonJsonLd(sermon: Sermon, site: SiteConfig) {
     name: sermon.title,
     description: `${sermon.title} oleh ${sermon.speaker}. Tema ayat: ${sermon.verse}.`,
     thumbnailUrl: [sermon.image],
-    uploadDate: normalizeIndonesianDate(sermon.date),
+    uploadDate: sermon.publishedAt || normalizeIndonesianDate(sermon.date),
     inLanguage: "id-ID",
     publisher: { "@id": `${baseUrl(site.url)}/#church` },
     mainEntityOfPage: url,
@@ -183,6 +211,28 @@ export function createSermonJsonLd(sermon: Sermon, site: SiteConfig) {
     "@type": "VideoObject",
     embedUrl: `https://www.youtube-nocookie.com/embed/${sermon.youtubeId}`,
     contentUrl: `https://www.youtube.com/watch?v=${sermon.youtubeId}`,
+  };
+}
+
+export function createMinistryJsonLd(
+  ministry: MinistrySeoInput,
+  site: SiteConfig,
+) {
+  const url = absoluteUrl(site.url, `/pelayanan/${ministry.slug}`);
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "@id": `${url}#ministry`,
+    name: ministry.name,
+    description: ministry.shortDescription,
+    url,
+    parentOrganization: { "@id": `${baseUrl(site.url)}/#church` },
+    ...(ministry.image ? { image: ministry.image } : {}),
+    ...(ministry.coordinator
+      ? { employee: { "@type": "Person", name: ministry.coordinator } }
+      : {}),
+    ...(ministry.email ? { email: ministry.email } : {}),
   };
 }
 

@@ -11,6 +11,19 @@ export const metadata: Metadata = {
   title: "Pelayanan",
   description: "Departemen dan pelayanan GMAHK Jemaat Naripan.",
   alternates: { canonical: "/pelayanan" },
+  openGraph: {
+    type: "website",
+    title: "Pelayanan",
+    description: "Departemen dan pelayanan GMAHK Jemaat Naripan.",
+    url: "/pelayanan",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Pelayanan",
+    description: "Departemen dan pelayanan GMAHK Jemaat Naripan.",
+    images: ["/opengraph-image"],
+  },
 };
 
 export const revalidate = 60;

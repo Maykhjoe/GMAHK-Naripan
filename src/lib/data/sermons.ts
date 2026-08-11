@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { sermons as fallbackSermons } from "@/lib/constants/site-data";
 import {
   createPagination,
@@ -208,7 +210,7 @@ export async function getPublishedSermons(
   return (data as unknown as SermonRow[]).map(mapDatabaseSermon);
 }
 
-export async function getPublishedSermonBySlug(
+async function loadPublishedSermonBySlug(
   slug: string,
 ): Promise<PublicSermon | null> {
   const supabase = createPublicClient();
@@ -240,6 +242,8 @@ export async function getPublishedSermonBySlug(
   return data ? mapDatabaseSermon(data as unknown as SermonRow) : null;
 }
 
+
+export const getPublishedSermonBySlug = cache(loadPublishedSermonBySlug);
 export async function getRelatedSermons(
   currentId: string,
   category: string,

@@ -17,8 +17,19 @@ import {
 export const metadata: Metadata = {
   title: "Berita & Renungan",
   description: "Berita jemaat, renungan, dan artikel inspiratif.",
-  alternates: {
-    canonical: "/berita",
+  alternates: { canonical: "/berita" },
+  openGraph: {
+    type: "website",
+    title: "Berita & Renungan",
+    description: "Berita jemaat, renungan, dan artikel inspiratif.",
+    url: "/berita",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Berita & Renungan",
+    description: "Berita jemaat, renungan, dan artikel inspiratif.",
+    images: ["/opengraph-image"],
   },
 };
 

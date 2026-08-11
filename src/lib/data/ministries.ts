@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { allMinistries as fallbackMinistries } from "@/lib/constants/site-data";
 import {
   createPagination,
@@ -226,7 +228,7 @@ export async function getPublishedMinistries(
   return (data as MinistryRow[]).map(mapDatabaseMinistry);
 }
 
-export async function getPublishedMinistryBySlug(
+async function loadPublishedMinistryBySlug(
   slug: string,
 ): Promise<PublicMinistry | null> {
   const supabase = createPublicClient();
@@ -278,6 +280,8 @@ export async function getPublishedMinistryBySlug(
     : null;
 }
 
+
+export const getPublishedMinistryBySlug = cache(loadPublishedMinistryBySlug);
 
 export async function getPublishedMinistriesPage(
   filters: PublicPageFilters,

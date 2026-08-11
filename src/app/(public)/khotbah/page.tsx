@@ -16,10 +16,20 @@ import {
 
 export const metadata: Metadata = {
   title: "Arsip Khotbah",
-  description:
-    "Khotbah, renungan, seminar, dan kesaksian GMAHK Jemaat Naripan.",
-  alternates: {
-    canonical: "/khotbah",
+  description: "Khotbah, renungan, seminar, dan kesaksian GMAHK Jemaat Naripan.",
+  alternates: { canonical: "/khotbah" },
+  openGraph: {
+    type: "website",
+    title: "Arsip Khotbah",
+    description: "Khotbah, renungan, seminar, dan kesaksian GMAHK Jemaat Naripan.",
+    url: "/khotbah",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Arsip Khotbah",
+    description: "Khotbah, renungan, seminar, dan kesaksian GMAHK Jemaat Naripan.",
+    images: ["/opengraph-image"],
   },
 };
 

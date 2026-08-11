@@ -5,15 +5,17 @@ import { getSiteConfig } from "@/lib/data/site-settings";
 export default async function robots(): Promise<MetadataRoute.Robots> {
   const site = await getSiteConfig();
 
+  const base = site.url.replace(/\/+$/, "");
+
   return {
     rules: [
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin/", "/api/", "/auth/", "/permohonan-doa"],
+        disallow: ["/admin/", "/api/", "/auth/"],
       },
     ],
-    sitemap: `${site.url}/sitemap.xml`,
-    host: site.url,
+    sitemap: `${base}/sitemap.xml`,
+    host: base,
   };
 }

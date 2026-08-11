@@ -56,6 +56,7 @@ const iconMap: Record<string, LucideIcon> = {
   "/admin/tampilan": Settings,
   "/admin/pengaturan": Settings,
   "/admin/audit-log": ScrollText,
+  "/admin/keamanan": ShieldCheck,
 };
 
 export function AdminSidebar({ role = "super_admin" }: { role?: AdminRole }) {

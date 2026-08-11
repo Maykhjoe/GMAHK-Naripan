@@ -18,6 +18,7 @@ import {
 } from "@/lib/admin/article-workflow";
 import { prepareResourcePayload } from "@/lib/admin/resource-payload";
 import { recordSecurityAudit } from "@/lib/admin/security-audit";
+import { revalidatePublicContent } from "@/lib/cache/public-content";
 import {
   getAdminResource,
   parseResourcePayload,
@@ -451,6 +452,8 @@ export async function PATCH(
     );
   }
 
+  revalidatePublicContent(ctx.section, data);
+
   return NextResponse.json({ data });
 }
 
@@ -471,7 +474,7 @@ export async function DELETE(
     );
     let currentArticleQuery = ctx.auth.supabase
       .from("posts")
-      .select("created_by,status")
+      .select("created_by,status,slug")
       .eq("id", ctx.id)
       .is("deleted_at", null);
 
@@ -535,6 +538,8 @@ export async function DELETE(
       );
     }
 
+    revalidatePublicContent(ctx.section, current);
+
     return NextResponse.json({ success: true });
   }
 
@@ -569,6 +574,8 @@ export async function DELETE(
       { status: 404 },
     );
   }
+
+  revalidatePublicContent(ctx.section);
 
   return NextResponse.json({ success: true });
 }

@@ -11,9 +11,14 @@ import {
   UserRound,
 } from "lucide-react";
 
+import { JsonLd } from "@/components/seo/json-ld";
 import { Button } from "@/components/ui/button";
 import { getPublishedMinistryBySlug } from "@/lib/data/ministries";
 import { getSiteConfig } from "@/lib/data/site-settings";
+import {
+  createBreadcrumbJsonLd,
+  createMinistryJsonLd,
+} from "@/lib/seo/structured-data";
 
 export const revalidate = 60;
 
@@ -68,6 +73,12 @@ export async function generateMetadata({
           ]
         : undefined,
     },
+    twitter: {
+      card: "summary_large_image",
+      title: ministry.name,
+      description: ministry.shortDescription,
+      images: ministry.image ? [ministry.image] : undefined,
+    },
   };
 }
 
@@ -94,6 +105,18 @@ export default async function MinistryDetail({
 
   return (
     <>
+      <JsonLd data={createMinistryJsonLd(ministry, siteConfig)} />
+      <JsonLd
+        data={createBreadcrumbJsonLd(
+          [
+            { name: "Beranda", path: "/" },
+            { name: "Pelayanan", path: "/pelayanan" },
+            { name: ministry.name, path: `/pelayanan/${ministry.slug}` },
+          ],
+          siteConfig.url,
+        )}
+      />
+
       <section className="relative isolate overflow-hidden bg-primary pb-20 pt-36 text-white">
         {ministry.image && (
           <>

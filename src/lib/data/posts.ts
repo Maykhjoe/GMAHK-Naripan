@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { posts as fallbackPosts } from "@/lib/constants/site-data";
 import {
   createPagination,
@@ -231,7 +233,7 @@ export async function getPublishedPosts(
   return (data as PostRow[]).map(mapDatabasePost);
 }
 
-export async function getPublishedPostBySlug(
+async function loadPublishedPostBySlug(
   slug: string,
 ): Promise<PublicPost | null> {
   const supabase = createPublicClient();
@@ -265,6 +267,8 @@ export async function getPublishedPostBySlug(
   return data ? mapDatabasePost(data as PostRow) : null;
 }
 
+
+export const getPublishedPostBySlug = cache(loadPublishedPostBySlug);
 
 export async function getPostFilterOptions(): Promise<{
   categories: SelectOption[];

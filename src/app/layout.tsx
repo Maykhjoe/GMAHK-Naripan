@@ -34,7 +34,23 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: site.description,
     applicationName: site.shortName,
+    keywords: [
+      "GMAHK Naripan",
+      "Gereja Advent Bandung",
+      "Gereja Masehi Advent Hari Ketujuh",
+      "ibadah Sabat Bandung",
+      "khotbah Advent",
+      "pelayanan jemaat",
+    ],
+    creator: site.name,
+    publisher: site.name,
+    category: "religion",
     alternates: { canonical: "/" },
+    formatDetection: {
+      email: false,
+      address: false,
+      telephone: false,
+    },
     openGraph: {
       type: "website",
       locale: "id_ID",
@@ -42,11 +58,20 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName: site.name,
       title: site.name,
       description: site.description,
+      images: [
+        {
+          url: "/opengraph-image",
+          width: 1200,
+          height: 630,
+          alt: site.name,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: site.name,
       description: site.description,
+      images: ["/opengraph-image"],
     },
     robots: { index: true, follow: true },
   };

@@ -18,8 +18,19 @@ import {
 export const metadata: Metadata = {
   title: "Kegiatan",
   description: "Agenda dan kegiatan terbaru GMAHK Jemaat Naripan.",
-  alternates: {
-    canonical: "/kegiatan",
+  alternates: { canonical: "/kegiatan" },
+  openGraph: {
+    type: "website",
+    title: "Kegiatan",
+    description: "Agenda dan kegiatan terbaru GMAHK Jemaat Naripan.",
+    url: "/kegiatan",
+    images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Kegiatan",
+    description: "Agenda dan kegiatan terbaru GMAHK Jemaat Naripan.",
+    images: ["/opengraph-image"],
   },
 };
 

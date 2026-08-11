@@ -18,6 +18,7 @@ import {
 import { prepareResourcePayload } from "@/lib/admin/resource-payload";
 import { specialWorshipCategories } from "@/lib/constants/worship-schedules";
 import { recordSecurityAudit } from "@/lib/admin/security-audit";
+import { revalidatePublicContent } from "@/lib/cache/public-content";
 import { enforceRateLimit } from "@/lib/security/enforce-rate-limit";
 import {
   getAdminResource,
@@ -441,6 +442,8 @@ export async function POST(
       { status: 500 },
     );
   }
+
+  revalidatePublicContent(section, data);
 
   return NextResponse.json({ data }, { status: 201 });
 }

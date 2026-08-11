@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { eventCategories } from "@/lib/constants/content-options";
 import { events as fallbackEvents } from "@/lib/constants/site-data";
 import {
@@ -324,7 +326,7 @@ export async function getPastEvents(
   return typeof limit === "number" ? events.slice(0, limit) : events;
 }
 
-export async function getPublishedEventBySlug(
+async function loadPublishedEventBySlug(
   slug: string,
 ): Promise<PublicEvent | null> {
   const supabase = createPublicClient();
@@ -358,6 +360,8 @@ export async function getPublishedEventBySlug(
   return data ? mapDatabaseEvent(data as EventRow) : null;
 }
 
+
+export const getPublishedEventBySlug = cache(loadPublishedEventBySlug);
 
 export function getEventFilterOptions(): {
   categories: SelectOption[];

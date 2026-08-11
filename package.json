@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:security": "vitest run src/lib/security src/lib/permissions/rbac.test.ts src/lib/admin/access-control.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.6.0",

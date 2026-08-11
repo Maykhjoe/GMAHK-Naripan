@@ -34,6 +34,13 @@ export async function generateMetadata(): Promise<Metadata> {
       description: `Siaran langsung dan rekaman ibadah ${site.name}.`,
       url: `${site.url}/live`,
       type: "website",
+      images: [{ url: "/opengraph-image", width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `Live Streaming | ${site.shortName}`,
+      description: `Siaran langsung dan rekaman ibadah ${site.name}.`,
+      images: ["/opengraph-image"],
     },
   };
 }

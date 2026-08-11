@@ -17,9 +17,8 @@ describe("structured data", () => {
     expect(serialized).toContain("\\u003c/script\\u003e");
   });
 
-  it("creates Church schema with official contact data and excludes placeholders", () => {
+  it("creates Church schema with official contact data and omits empty fields", () => {
     const schema = createChurchJsonLd(siteConfig);
-
     expect(schema).toMatchObject({
       "@context": "https://schema.org",
       "@type": "Church",
@@ -32,8 +31,20 @@ describe("structured data", () => {
       },
       email: siteConfig.email,
     });
-
     expect(schema).not.toHaveProperty("telephone");
+  });
+
+  it("does not publish placeholder Church contact data", () => {
+    const schema = createChurchJsonLd({
+      ...siteConfig,
+      address: "belum tersedia",
+      phone: "placeholder",
+      email: "placeholder",
+    });
+
+    expect(schema).not.toHaveProperty("address");
+    expect(schema).not.toHaveProperty("telephone");
+    expect(schema).not.toHaveProperty("email");
   });
 
   it("creates WebSite schema linked to the church publisher", () => {
