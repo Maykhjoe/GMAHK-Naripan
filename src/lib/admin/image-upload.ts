@@ -27,7 +27,8 @@ type Options = {
     | "sermon-thumbnail"
     | "livestream-thumbnail"
     | "leader-photo"
-    | "ministry-thumbnail";
+    | "ministry-thumbnail"
+    | "ministry-coordinator-photo";
   label: string;
   maxBytes?: number;
 };

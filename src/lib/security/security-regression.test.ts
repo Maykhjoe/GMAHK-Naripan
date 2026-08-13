@@ -60,11 +60,19 @@ describe("security regression guard", () => {
       "src/app/api/admin/live/thumbnail/route.ts",
       "src/app/api/admin/pengurus/photo/route.ts",
       "src/app/api/admin/departemen/image/route.ts",
+      "src/app/api/admin/gallery/[albumId]/images/route.ts",
     ];
 
     for (const route of uploadRoutes) {
       const text = readFileSync(join(root, route), "utf8");
-      expect(text.includes("handleAdminImageUpload"), route).toBe(true);
+      if (route.includes("/gallery/")) {
+        expect(text.includes("validateUploadFile"), route).toBe(true);
+        expect(text.includes("validateMutationOrigin"), route).toBe(true);
+        expect(text.includes("requireAdminPermission(\"gallery.manage\")"), route).toBe(true);
+        expect(text.includes("requestBodyExceeds"), route).toBe(true);
+      } else {
+        expect(text.includes("handleAdminImageUpload"), route).toBe(true);
+      }
     }
   });
 

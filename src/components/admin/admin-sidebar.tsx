@@ -1,5 +1,6 @@
 "use client";
 
+import { m, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -62,6 +63,7 @@ const iconMap: Record<string, LucideIcon> = {
 export function AdminSidebar({ role = "super_admin" }: { role?: AdminRole }) {
   const path = usePathname();
   const router = useRouter();
+  const reduce = useReducedMotion();
   const [open, setOpen] = useState(false);
   const menus = getAllowedAdminMenu(role);
 
@@ -127,13 +129,24 @@ export function AdminSidebar({ role = "super_admin" }: { role?: AdminRole }) {
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm text-white/65 transition hover:bg-white/8 hover:text-white",
-                    active &&
-                      "bg-gold text-primary hover:bg-gold hover:text-primary",
+                    "relative flex min-h-11 items-center gap-3 overflow-hidden rounded-xl px-3 text-sm text-white/65 transition hover:bg-white/8 hover:text-white",
+                    active && "text-primary hover:text-primary",
                   )}
                 >
-                  <Icon className="size-4" />
-                  {item.label}
+                  {active && !reduce && (
+                    <m.span
+                      layoutId="admin-active-menu"
+                      className="absolute inset-0 bg-gold"
+                      transition={{ type: "spring", stiffness: 420, damping: 38 }}
+                    />
+                  )}
+                  {active && reduce && (
+                    <span className="absolute inset-0 bg-gold" />
+                  )}
+                  <span className="relative flex items-center gap-3">
+                    <Icon className="size-4" />
+                    {item.label}
+                  </span>
                 </Link>
               );
             })}

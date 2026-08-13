@@ -137,3 +137,45 @@ select {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Patch 9: restrained ambient motion. Reveal/route motion uses Framer Motion;
+   these long-running decorative layers stay in CSS to keep runtime JS light. */
+@keyframes ambient-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.72;
+  }
+
+  50% {
+    transform: translate3d(12px, -10px, 0) scale(1.045);
+    opacity: 1;
+  }
+}
+
+@keyframes hero-ken-burns {
+  from {
+    transform: scale(1.015);
+  }
+
+  to {
+    transform: scale(1.055);
+  }
+}
+
+.motion-ambient-orb {
+  animation: ambient-drift 14s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+.motion-ambient-orb-delayed {
+  animation-delay: -7s;
+  animation-duration: 18s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-ambient-orb {
+    animation: none !important;
+    will-change: auto;
+  }
+}

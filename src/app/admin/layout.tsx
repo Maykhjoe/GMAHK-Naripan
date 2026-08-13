@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
+import { MotionProvider } from "@/components/motion/motion-provider";
 import { resolveHighestRole, type AdminRole } from "@/lib/permissions/rbac";
 import { createClient } from "@/lib/supabase/server";
 
@@ -64,11 +65,13 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-[#f3f4f1]">
+    <MotionProvider>
+      <div className="min-h-screen bg-[#f3f4f1]">
       <AdminSidebar role={role} />
       <main className="min-h-screen p-5 pt-20 lg:ml-72 lg:p-8 lg:pt-8">
         {children}
       </main>
-    </div>
+      </div>
+    </MotionProvider>
   );
 }

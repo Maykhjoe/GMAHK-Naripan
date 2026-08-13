@@ -82,9 +82,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function MinistryDetail({
-  params,
-}: MinistryDetailProps) {
+export default async function MinistryDetail({ params }: MinistryDetailProps) {
   const { slug } = await params;
   const [ministry, siteConfig] = await Promise.all([
     getPublishedMinistryBySlug(slug),
@@ -100,8 +98,7 @@ export default async function MinistryDetail({
     `Informasi Pelayanan ${ministry.name} — ${siteConfig.shortName}`,
   );
   const whatsappHref = createWhatsAppHref(ministry.contact);
-  const contactHref =
-    whatsappHref || `mailto:${email}?subject=${emailSubject}`;
+  const contactHref = whatsappHref || `mailto:${email}?subject=${emailSubject}`;
 
   return (
     <>
@@ -182,11 +179,32 @@ export default async function MinistryDetail({
           </article>
 
           <aside className="self-start rounded-2xl bg-primary p-8 text-white shadow-[0_20px_60px_rgba(38,53,43,.18)] lg:sticky lg:top-28">
-            <UserRound className="text-gold" aria-hidden="true" />
-            <h2 className="mt-5 font-serif text-2xl">Koordinator</h2>
-            <p className="mt-3 text-sm text-white/65">
-              {ministry.coordinator || "Nama koordinator akan diumumkan"}
+            {ministry.coordinatorPhoto ? (
+              <div className="relative size-32 overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-[0_18px_45px_rgba(0,0,0,.22)] sm:size-40 lg:size-52">
+                <Image
+                  src={ministry.coordinatorPhoto}
+                  alt={
+                    ministry.coordinator
+                      ? `Foto ${ministry.coordinator}`
+                      : `Foto koordinator ${ministry.name}`
+                  }
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 639px) 128px, (max-width: 1023px) 160px, 208px"
+                />
+              </div>
+            ) : (
+              <div className="grid size-12 place-items-center rounded-xl border border-white/10 bg-white/5">
+                <UserRound className="size-5 text-gold" aria-hidden="true" />
+              </div>
+            )}
+
+            <p className="mt-6 text-xs font-bold uppercase tracking-[0.16em] text-gold">
+              Koordinator Pelayanan
             </p>
+            <h2 className="mt-2 font-serif text-2xl">
+              {ministry.coordinator || "Nama koordinator akan diumumkan"}
+            </h2>
 
             <div className="mt-6 space-y-4 border-t border-white/10 pt-6 text-sm text-white/65">
               {ministry.contact && (

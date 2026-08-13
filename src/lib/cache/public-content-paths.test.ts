@@ -20,6 +20,13 @@ describe("public content cache invalidation paths", () => {
     ).not.toContain("/kegiatan/../admin");
   });
 
+
+  it("revalidates gallery listing and album detail", () => {
+    expect(
+      publicPathsForAdminMutation("galeri", { slug: "baptisan-agustus-2026" }),
+    ).toEqual(["/", "/galeri", "/galeri/baptisan-agustus-2026"]);
+  });
+
   it("returns no public paths for private inbox resources", () => {
     expect(publicPathsForAdminMutation("permohonan-doa")).toEqual([]);
   });

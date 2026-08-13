@@ -31,15 +31,15 @@ const missions = [
 const journey = [
   [
     "Awal Pelayanan",
-    "Komunitas bertumbuh melalui persekutuan, doa, dan pembelajaran Firman.",
+    "Sejak tahun 1935, gereja ini berdiri sebagai lilin kecil yang menyala di wilayah Jawa Barat, menghadirkan terang Injil, persekutuan, dan pengharapan bagi banyak jiwa.",
   ],
   [
-    "Melayani Kota",
-    "Pelayanan berkembang menjangkau keluarga, anak, pemuda, dan masyarakat.",
+    "Pelopor Pergerakan Penginjilan",
+    "Seiring berjalannya waktu, gereja ini bertumbuh menjadi salah satu pelopor pergerakan penginjilan Gereja Masehi Advent Hari Ketujuh di Jawa Barat, yang melahirkan sekitar 49 gereja dan cabang Sekolah Sabat.",
   ],
   [
     "Hari Ini",
-    "Terus bergerak menjadi gereja yang sehat, relevan, dan setia pada panggilan Kristus.",
+    "Kini, gereja ini terus melangkah sebagai salah satu pusat penginjilan yang strategis di wilayah Jawa Barat, khususnya Kota Bandung, dengan tetap setia melayani, membina, dan menjangkau masyarakat bagi Kristus.",
   ],
 ] as const;
 
@@ -82,13 +82,14 @@ export default async function AboutPage() {
         eyebrow="Tentang Kami"
         title="Bertumbuh bersama, melayani dengan kasih."
         description={`Mengenal perjalanan, panggilan, dan nilai yang menggerakkan keluarga ${site.shortName}.`}
+        image="/images/about-hero.jpg"
       />
 
       <section id="profil-gereja" className="section-pad scroll-mt-24 bg-white">
         <div className="container-site grid items-center gap-14 lg:grid-cols-2">
           <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] shadow-[0_24px_70px_rgba(38,53,43,.12)]">
             <Image
-              src="https://images.unsplash.com/photo-1491396023581-4344e51fec5c?auto=format&fit=crop&w=1200&q=90"
+              src="/images/naripan.jpg"
               alt="Gedung gereja"
               fill
               className="object-cover"
@@ -102,31 +103,35 @@ export default async function AboutPage() {
               title="Rumah rohani bagi setiap generasi."
             />
             <p className="mt-6 leading-8 text-muted">
-              {site.shortName} hadir sebagai komunitas yang menempatkan
+              {site.shortName} Sejak tahun 1935, GMAHK Naripan hadir sebagai
+              rumah rohani bagi jemaat dan masyarakat, dengan menempatkan
               Kristus sebagai pusat kehidupan. Kami beribadah pada hari Sabat,
-              mempelajari Alkitab, memelihara persekutuan, serta melayani
-              kebutuhan manusia secara utuh.
+              mempelajari Alkitab, membangun persekutuan, dan bertumbuh bersama
+              dalam iman serta pengharapan. Sebagai bagian dari pelayanan
+              gereja, GMAHK Naripan rindu melayani setiap generasi secara utuh
+              melalui pembinaan rohani, kebersamaan jemaat, dan perhatian
+              terhadap kebutuhan sesama. Kami percaya gereja bukan sekadar
+              tempat beribadah, melainkan komunitas iman yang menghadirkan kasih
+              Tuhan secara nyata.
             </p>
             <p className="mt-4 leading-8 text-muted">
-              Informasi pelayanan dan pengurus ditampilkan dari data resmi
-              yang dikelola melalui dashboard gereja, sehingga dapat terus
-              diperbarui sesuai kebutuhan pelayanan jemaat.
+              Informasi pelayanan dan pengurus ditampilkan dari data resmi yang
+              dikelola melalui dashboard gereja, sehingga dapat terus diperbarui
+              sesuai kebutuhan pelayanan jemaat.
             </p>
           </div>
         </div>
       </section>
 
-      <section
-        id="visi-dan-misi"
-        className="section-pad scroll-mt-24 bg-cream"
-      >
+      <section id="visi-dan-misi" className="section-pad scroll-mt-24 bg-cream">
         <div className="container-site grid gap-6 lg:grid-cols-3">
           <div className="rounded-2xl bg-primary p-8 text-white shadow-[0_20px_60px_rgba(38,53,43,.16)]">
             <Target className="text-gold" aria-hidden="true" />
             <h2 className="mt-6 font-serif text-3xl">Visi</h2>
             <p className="mt-4 leading-7 text-white/65">
-              Menjadi komunitas yang mencerminkan kasih Kristus, bertumbuh
-              dalam kebenaran, dan membawa pengharapan.
+              ” Selaras dengan wahyu Alkitab, GMAHK melihat sebagai klimaks dari
+              rencana Allah untuk memulihkan segenap ciptaan-Nya untuk menjadi
+              selaras sepenuhnya dengan kehendak dan kebenaran-Nya.”
             </p>
           </div>
 

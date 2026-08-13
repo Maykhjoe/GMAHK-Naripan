@@ -11,8 +11,7 @@ import { getUpcomingSpecialWorshipSchedules } from "@/lib/data/schedules";
 
 export const metadata: Metadata = {
   title: "Jadwal Ibadah",
-  description:
-    "Jadwal ibadah rutin dan ibadah khusus GMAHK Jemaat Naripan.",
+  description: "Jadwal ibadah rutin dan ibadah khusus GMAHK Jemaat Naripan.",
   alternates: { canonical: "/jadwal-ibadah" },
 };
 
@@ -27,6 +26,7 @@ export default async function SchedulePage() {
         eyebrow="Waktu Bersama Tuhan"
         title="Jadwal ibadah dan persekutuan"
         description="Jadwal rutin kami tetap setiap minggu. Ibadah khusus akan diumumkan melalui halaman ini."
+        image="/images/jadwal-hero.png"
       />
 
       <section className="section-pad bg-cream">

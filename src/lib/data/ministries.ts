@@ -53,6 +53,7 @@ export type PublicMinistry = Ministry & {
   shortDescription: string;
   details: string[];
   coordinator: string | null;
+  coordinatorPhoto: string | null;
   contact: string | null;
   email: string | null;
   schedule: string | null;
@@ -135,6 +136,7 @@ function mapFallbackMinistry(
     shortDescription: ministry.description,
     details: [ministry.description],
     coordinator: null,
+    coordinatorPhoto: null,
     contact: null,
     email: null,
     schedule: null,
@@ -167,6 +169,7 @@ function mapDatabaseMinistry(row: MinistryRow): PublicMinistry {
     shortDescription,
     details: details.length ? details : [shortDescription],
     coordinator: stringValue(seo, "coordinator"),
+    coordinatorPhoto: stringValue(seo, "coordinatorPhoto"),
     contact: row.contact?.trim() || null,
     email: stringValue(seo, "email"),
     schedule: stringValue(seo, "schedule"),

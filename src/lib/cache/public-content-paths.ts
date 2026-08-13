@@ -24,6 +24,7 @@ const DETAIL_BASE_PATH: Record<string, string> = {
   kegiatan: "/kegiatan",
   khotbah: "/khotbah",
   departemen: "/pelayanan",
+  galeri: "/galeri",
 };
 
 function slugFrom(value: unknown) {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { MinistryCard } from "@/components/cards/content-cards";
+import { MotionGrid } from "@/components/motion/motion-grid";
 import { PublicContentFilters } from "@/components/content/public-content-filters";
 import { PageHero } from "@/components/sections/page-hero";
 import { QueryPagination } from "@/components/ui/query-pagination";
@@ -72,11 +73,11 @@ export default async function MinistriesPage({
           </div>
 
           {result.items.length > 0 ? (
-            <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            <MotionGrid className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               {result.items.map((item) => (
                 <MinistryCard key={item.id} item={item} />
               ))}
-            </div>
+            </MotionGrid>
           ) : (
             <div className="mt-8 rounded-2xl border border-dashed border-primary/20 bg-white p-12 text-center">
               <p className="font-serif text-2xl text-primary">

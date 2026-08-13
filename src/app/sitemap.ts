@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 
 import { getPublishedEvents } from "@/lib/data/events";
+import { getPublishedGalleryAlbums } from "@/lib/data/gallery";
 import { getPublishedMinistries } from "@/lib/data/ministries";
 import { getPublishedPosts } from "@/lib/data/posts";
 import { getPublishedSermons } from "@/lib/data/sermons";
@@ -13,12 +14,13 @@ function safeLastModified(value: string | undefined) {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [site, events, sermons, posts, ministries] = await Promise.all([
+  const [site, events, sermons, posts, ministries, galleryAlbums] = await Promise.all([
     getSiteConfig(),
     getPublishedEvents(),
     getPublishedSermons(),
     getPublishedPosts(),
     getPublishedMinistries(),
+    getPublishedGalleryAlbums(),
   ]);
 
   const base = site.url.replace(/\/+$/, "");
@@ -71,6 +73,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: safeLastModified(item.updatedAt),
       changeFrequency: "monthly" as const,
       priority: 0.65,
+    })),
+    ...galleryAlbums.map((item) => ({
+      url: `${base}/galeri/${item.slug}`,
+      lastModified: safeLastModified(item.updatedAt),
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
     })),
   ];
 }

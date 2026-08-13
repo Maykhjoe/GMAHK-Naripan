@@ -264,10 +264,14 @@ export function ResourceFormDialog({
 
     const form = new FormData();
     form.set("file", file);
-    form.set(
-      "altText",
-      String(getValues("title") || getValues("name") || "Gambar konten"),
-    );
+    const altText =
+      field.key === "coordinator_photo_id"
+        ? getValues("coordinator_name") ||
+          getValues("name") ||
+          "Foto koordinator pelayanan"
+        : getValues("title") || getValues("name") || "Gambar konten";
+
+    form.set("altText", String(altText));
 
     const response = await fetch(field.uploadEndpoint, {
       method: "POST",

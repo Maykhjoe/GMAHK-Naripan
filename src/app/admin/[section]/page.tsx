@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 
 import { DataTable } from "@/components/admin/data-table";
+import { GalleryManager } from "@/components/admin/gallery-manager";
 import { MediaManager } from "@/components/admin/media-manager";
 import { SiteSettingsForm } from "@/components/admin/site-settings-form";
 import { SubmissionInbox } from "@/components/admin/submission-inbox";
@@ -166,6 +167,8 @@ export default async function AdminSection({
           <SiteSettingsForm />
         ) : submissionKind ? (
           <SubmissionInbox kind={submissionKind} />
+        ) : section === "galeri" && resource ? (
+          <GalleryManager resource={resource} />
         ) : resource ? (
           <DataTable resource={resource} />
         ) : section === "file" ? (

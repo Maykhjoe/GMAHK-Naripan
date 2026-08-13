@@ -216,6 +216,8 @@ describe("resource payload preparation", () => {
         description: "Deskripsi lengkap pelayanan anak.",
         short_name: "PA",
         coordinator_name: "Ibu Contoh",
+        coordinator_photo_id: "55555555-5555-4555-8555-555555555555",
+        coordinator_photo_url: "https://example.com/koordinator-anak.webp",
         contact_email: "anak@example.org",
         schedule: "Sabtu, 14.00 WIB",
         location: "Ruang Anak",
@@ -234,6 +236,8 @@ describe("resource payload preparation", () => {
         description: "Menolong anak mengenal dan mengasihi Yesus.",
         shortName: "PA",
         coordinator: "Ibu Contoh",
+        coordinatorPhoto: "https://example.com/koordinator-anak.webp",
+        coordinatorPhotoId: "55555555-5555-4555-8555-555555555555",
         email: "anak@example.org",
         schedule: "Sabtu, 14.00 WIB",
         location: "Ruang Anak",
@@ -244,11 +248,42 @@ describe("resource payload preparation", () => {
 
     expect(payload).not.toHaveProperty("short_name");
     expect(payload).not.toHaveProperty("coordinator_name");
+    expect(payload).not.toHaveProperty("coordinator_photo_id");
+    expect(payload).not.toHaveProperty("coordinator_photo_url");
     expect(payload).not.toHaveProperty("contact_email");
     expect(payload).not.toHaveProperty("schedule");
     expect(payload).not.toHaveProperty("location");
     expect(payload).not.toHaveProperty("ministry_icon");
     expect(payload).not.toHaveProperty("thumbnail_url");
+  });
+
+
+  it("keeps the ministry coordinator photo optional", () => {
+    const resource = getAdminResource("departemen");
+    expect(resource).not.toBeNull();
+
+    const payload = prepareResourcePayload(
+      "departemen",
+      resource!,
+      {
+        name: "Pelayanan Musik",
+        short_description: "Pelayanan pujian jemaat.",
+        description: "Melayani jemaat melalui musik dan pujian.",
+        coordinator_name: "Bapak Contoh",
+        coordinator_photo_id: "",
+        coordinator_photo_url: "",
+        programs: "Latihan rutin",
+      },
+      "create",
+    );
+
+    expect(payload.seo).toMatchObject({
+      coordinator: "Bapak Contoh",
+    });
+    expect(payload.seo).not.toHaveProperty("coordinatorPhoto");
+    expect(payload.seo).not.toHaveProperty("coordinatorPhotoId");
+    expect(payload).not.toHaveProperty("coordinator_photo_id");
+    expect(payload).not.toHaveProperty("coordinator_photo_url");
   });
 
   it("normalizes livestream YouTube input and keeps uploaded thumbnail data", () => {

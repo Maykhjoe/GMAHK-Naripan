@@ -287,6 +287,8 @@ export function prepareResourcePayload(
 
       const shortName = nonEmptyString(payload.short_name);
       const coordinator = nonEmptyString(payload.coordinator_name);
+      const coordinatorPhoto = nonEmptyString(payload.coordinator_photo_url);
+      const coordinatorPhotoId = nonEmptyString(payload.coordinator_photo_id);
       const email = nonEmptyString(payload.contact_email);
       const schedule = nonEmptyString(payload.schedule);
       const location = nonEmptyString(payload.location);
@@ -300,6 +302,8 @@ export function prepareResourcePayload(
         "description" in payload ||
         "short_name" in payload ||
         "coordinator_name" in payload ||
+        "coordinator_photo_url" in payload ||
+        "coordinator_photo_id" in payload ||
         "contact_email" in payload ||
         "schedule" in payload ||
         "location" in payload ||
@@ -312,6 +316,8 @@ export function prepareResourcePayload(
           {
             shortName: shortName ?? undefined,
             coordinator: coordinator ?? undefined,
+            coordinatorPhoto: coordinatorPhoto ?? undefined,
+            coordinatorPhotoId: coordinatorPhotoId ?? undefined,
             email: email ?? undefined,
             schedule: schedule ?? undefined,
             location: location ?? undefined,
@@ -329,6 +335,14 @@ export function prepareResourcePayload(
 
         if ("coordinator_name" in payload && !coordinator) {
           delete seo.coordinator;
+        }
+
+        if ("coordinator_photo_url" in payload && !coordinatorPhoto) {
+          delete seo.coordinatorPhoto;
+        }
+
+        if ("coordinator_photo_id" in payload && !coordinatorPhotoId) {
+          delete seo.coordinatorPhotoId;
         }
 
         if ("contact_email" in payload && !email) {
@@ -354,6 +368,8 @@ export function prepareResourcePayload(
 
       delete payload.short_name;
       delete payload.coordinator_name;
+      delete payload.coordinator_photo_url;
+      delete payload.coordinator_photo_id;
       delete payload.contact_email;
       delete payload.schedule;
       delete payload.location;

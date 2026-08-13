@@ -35,7 +35,7 @@ export function LiveHomepageSection({
 
   return (
     <MotionSection className="section-pad relative overflow-hidden bg-primary text-white">
-      <div className="absolute -right-32 -top-32 size-96 rounded-full border border-gold/10" />
+      <div className="motion-ambient-orb absolute -right-32 -top-32 size-96 rounded-full border border-gold/10 bg-gold/[.025]" />
 
       <div className="container-site">
         <div className="grid items-end gap-8 lg:grid-cols-[1fr_auto]">
