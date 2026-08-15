@@ -5,9 +5,6 @@ import { revalidatePath } from "next/cache";
 import { publicPathsForAdminMutation } from "@/lib/cache/public-content-paths";
 
 export function revalidatePublicContent(section: string, record?: unknown) {
-  if (section === "departemen") {
-    revalidatePath("/", "layout");
-  }
   for (const path of publicPathsForAdminMutation(section, record)) {
     revalidatePath(path);
   }

@@ -12,11 +12,6 @@ import { defaultSiteConfig, type SiteConfig } from "@/lib/site/config";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
 
-type MinistryNavigationItem = {
-  label: string;
-  href: string;
-};
-
 const mobileList = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.055, delayChildren: 0.08 } },
@@ -31,27 +26,15 @@ export function Navbar({
   overlay = false,
   site = defaultSiteConfig,
   isLive = false,
-  ministryNavItems = [],
 }: {
   overlay?: boolean;
   site?: SiteConfig;
   isLive?: boolean;
-  ministryNavItems?: readonly MinistryNavigationItem[];
 }) {
   const pathname = usePathname();
   const reduce = useReducedMotion();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-
-  const resolvedNavItems = navItems.map((item) =>
-    item.href === "/pelayanan"
-      ? {
-          ...item,
-          children:
-            ministryNavItems.length > 0 ? ministryNavItems : undefined,
-        }
-      : item,
-  );
 
   const closeMenu = () => {
     setOpen(false);
@@ -133,7 +116,7 @@ export function Navbar({
             useLightTheme ? "text-white" : "text-primary",
           )}
         >
-          {resolvedNavItems.map((item) => {
+          {navItems.map((item) => {
             const active = isActive(item.href);
 
             return (
@@ -240,7 +223,7 @@ export function Navbar({
               variants={reduce ? undefined : mobileList}
               className="mt-12 grid max-h-[70vh] gap-1 overflow-y-auto"
             >
-              {resolvedNavItems.map((item, index) => (
+              {navItems.map((item, index) => (
                 <m.div key={item.href} variants={reduce ? undefined : mobileItem}>
                   <Link
                     href={item.href}

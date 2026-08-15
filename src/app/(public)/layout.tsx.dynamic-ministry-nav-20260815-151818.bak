@@ -6,7 +6,6 @@ import {
   PublicPageMotion,
 } from "@/components/motion/public-motion-chrome";
 import { getLivestreamOverview } from "@/lib/data/livestreams";
-import { getPublishedMinistryNavigation } from "@/lib/data/ministry-navigation";
 import { getSiteConfig } from "@/lib/data/site-settings";
 
 export default async function PublicLayout({
@@ -14,15 +13,14 @@ export default async function PublicLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [site, livestream, ministryNavItems] = await Promise.all([
+  const [site, livestream] = await Promise.all([
     getSiteConfig(),
     getLivestreamOverview(),
-    getPublishedMinistryNavigation(),
   ]);
 
   return (
     <MotionProvider>
-      <Navbar site={site} isLive={livestream.isLive} ministryNavItems={ministryNavItems} />
+      <Navbar site={site} isLive={livestream.isLive} />
       <PublicMotionChrome />
       <main className="min-h-screen">
         <PublicPageMotion>{children}</PublicPageMotion>
