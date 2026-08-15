@@ -34,7 +34,7 @@ export function buildContentSecurityPolicy(isDevelopment: boolean) {
     "font-src 'self' data:",
     "img-src 'self' data: blob: https://images.unsplash.com https://i.ytimg.com https://*.supabase.co",
     `connect-src ${connectSources.join(" ")}`,
-    "frame-src https://www.youtube-nocookie.com https://challenges.cloudflare.com",
+    "frame-src https://www.youtube-nocookie.com https://challenges.cloudflare.com https://www.google.com https://maps.google.com",
     "media-src 'self' blob: https://*.supabase.co",
     "worker-src 'self' blob:",
     "manifest-src 'self'",
