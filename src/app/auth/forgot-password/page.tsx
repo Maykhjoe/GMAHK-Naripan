@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,6 +17,7 @@ type Values = z.infer<typeof passwordResetRequestSchema>;
 type ApiError = { message?: string };
 
 export default function ForgotPasswordPage() {
+  const router = useRouter();
   const [sent, setSent] = useState(false);
   const [serverError, setServerError] = useState("");
 
@@ -46,6 +48,7 @@ export default function ForgotPasswordPage() {
       }
 
       setSent(true);
+      router.push("/auth/verify-reset");
     } catch (caught) {
       setServerError(
         caught instanceof Error
