@@ -931,29 +931,6 @@ export const adminResources: Record<string, AdminResource> = {
     ],
   },
 
-  tampilan: {
-    section: "tampilan",
-    table: "navigation_items",
-    permission: "appearance.manage",
-    title: "Navigasi Website",
-    singular: "Menu",
-    titleColumn: "label",
-    dateColumn: "updated_at",
-    softDelete: false,
-    fields: [
-      { key: "label", label: "Label", type: "text", required: true },
-      { key: "href", label: "Tautan", type: "text", required: true },
-      { key: "parent_id", label: "ID Menu Induk", type: "uuid" },
-      { key: "position", label: "Urutan", type: "number" },
-      {
-        key: "is_external",
-        label: "Tautan eksternal",
-        type: "checkbox",
-      },
-      activeStatus,
-    ],
-  },
-
   pengaturan: {
     section: "pengaturan",
     table: "site_settings",

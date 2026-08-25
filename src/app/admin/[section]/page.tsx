@@ -72,19 +72,14 @@ const sections: Record<string, { title: string; description: string }> = {
       "Baca, tindak lanjuti, dan arsipkan pesan yang dikirim melalui website.",
   },
   file: {
-    title: "File & Download",
+    title: "Media & Dokumen",
     description:
-      "Kelola gambar, dokumen PDF, metadata, dan penggunaan penyimpanan.",
+      "Kelola pustaka gambar dan dokumen yang digunakan oleh website melalui penyimpanan terpusat.",
   },
   pengguna: {
     title: "Pengguna",
     description:
       "Kelola akun admin, role, status, dan akses sesuai prinsip least privilege.",
-  },
-  tampilan: {
-    title: "Tampilan Website",
-    description:
-      "Atur hero, logo, navigasi, warna, dan konten unggulan.",
   },
   pengaturan: {
     title: "Pengaturan",
@@ -93,7 +88,7 @@ const sections: Record<string, { title: string; description: string }> = {
   },
 };
 
-const superAdminSections = new Set(["pengguna", "tampilan", "pengaturan"]);
+const superAdminSections = new Set(["pengguna", "pengaturan"]);
 
 const specialPermissions: Partial<Record<string, Permission>> = {
   file: "files.manage",

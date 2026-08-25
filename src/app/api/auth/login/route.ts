@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { validateMutationOrigin } from "@/lib/admin/auth";
+import { normalizeAdminUsername } from "@/lib/auth/username";
 import { clientKey } from "@/lib/rate-limit";
 import { enforceRateLimit } from "@/lib/security/enforce-rate-limit";
-import { normalizeEmail } from "@/lib/security/normalize";
 import { readJsonBody } from "@/lib/security/request";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { loginSchema } from "@/lib/validations/forms";
 
@@ -48,36 +49,61 @@ export async function POST(request: Request) {
   const parsed = loginSchema.safeParse(bodyResult.data);
   if (!parsed.success) {
     return NextResponse.json(
-      { message: "Email atau kata sandi tidak valid" },
+      { message: "Username atau kata sandi tidak valid" },
       { status: 422 },
     );
   }
 
-  const email = normalizeEmail(parsed.data.email) ?? "";
+  const username = normalizeAdminUsername(parsed.data.username);
   const accountLimited = await enforceRateLimit({
-    key: `auth-login-account:${ip}:${email}`,
+    key: `auth-login-account:${ip}:${username}`,
     limit: 5,
     windowMs: 15 * 60_000,
     message: "Terlalu banyak percobaan untuk akun ini. Silakan tunggu sebelum mencoba lagi.",
   });
   if (accountLimited) return accountLimited;
 
+  const admin = createAdminClient();
   const supabase = await createClient();
-  if (!supabase) {
+  if (!admin || !supabase) {
     return NextResponse.json(
       { message: "Layanan autentikasi belum dikonfigurasi" },
       { status: 503 },
     );
   }
 
+  const { data: profile, error: profileError } = await admin
+    .from("profiles")
+    .select("id,status")
+    .eq("username", username)
+    .maybeSingle();
+
+  if (profileError || !profile || profile.status !== "active") {
+    return NextResponse.json(
+      { message: "Username atau kata sandi tidak valid" },
+      { status: 401 },
+    );
+  }
+
+  const { data: authUserData, error: authUserError } =
+    await admin.auth.admin.getUserById(profile.id);
+  const internalEmail = authUserData.user?.email;
+
+  if (authUserError || !internalEmail) {
+    return NextResponse.json(
+      { message: "Username atau kata sandi tidak valid" },
+      { status: 401 },
+    );
+  }
+
   const { error } = await supabase.auth.signInWithPassword({
-    email,
+    email: internalEmail,
     password: parsed.data.password,
   });
 
   if (error) {
     return NextResponse.json(
-      { message: "Email atau kata sandi tidak valid" },
+      { message: "Username atau kata sandi tidak valid" },
       { status: 401 },
     );
   }

@@ -60,8 +60,9 @@ describe("admin resource registry", () => {
     );
   });
 
-  it("rejects unknown resources", () => {
+  it("rejects unknown and retired resources", () => {
     expect(getAdminResource("tidak-ada")).toBeNull();
+    expect(getAdminResource("tampilan")).toBeNull();
   });
 
   it("removes protected, generated, and unknown fields from payloads", () => {

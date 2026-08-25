@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import {
@@ -6,13 +7,15 @@ import {
   validateMutationOrigin,
 } from "@/lib/admin/auth";
 import { recordSecurityAudit } from "@/lib/admin/security-audit";
-import { adminInviteSchema } from "@/lib/admin/user-validation";
+import { adminCreateUserSchema } from "@/lib/admin/user-validation";
 import { resolveHighestRole } from "@/lib/permissions/rbac";
 import { getAdminRoleLabel } from "@/lib/permissions/roles";
+import { readJsonBody } from "@/lib/security/request";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type ProfileRow = {
   id: string;
+  username: string;
   full_name: string | null;
   status: string;
   user_roles: {
@@ -60,7 +63,9 @@ export async function GET(request: Request) {
     ids.length
       ? admin
           .from("profiles")
-          .select("id,full_name,status,user_roles(ministry_id,roles(code,name))")
+          .select(
+            "id,username,full_name,status,user_roles(ministry_id,roles(code,name))",
+          )
           .in("id", ids)
       : Promise.resolve({ data: [], error: null }),
     admin
@@ -77,9 +82,8 @@ export async function GET(request: Request) {
     );
   }
 
-  const profileData = profileResult.data;
   const profiles = new Map(
-    ((profileData ?? []) as ProfileRow[]).map((profile) => [
+    (((profileResult.data ?? []) as ProfileRow[])).map((profile) => [
       profile.id,
       profile,
     ]),
@@ -108,14 +112,13 @@ export async function GET(request: Request) {
 
     return {
       id: user.id,
-      email: user.email ?? "",
+      username: profile?.username ?? "",
       fullName:
         profile?.full_name ?? String(user.user_metadata?.full_name ?? ""),
       status: profile?.status ?? "active",
       role,
       roleName: role ? getAdminRoleLabel(role) : null,
       ministryId: roleAssignment?.ministry_id ?? null,
-      invitedAt: user.invited_at ?? null,
       lastSignInAt: user.last_sign_in_at ?? null,
       createdAt: user.created_at,
       isCurrentUser: user.id === auth.user.id,
@@ -154,38 +157,70 @@ export async function POST(request: Request) {
     );
   }
 
-  const parsed = adminInviteSchema.safeParse(
-    await request.json().catch(() => null),
-  );
+  const bodyResult = await readJsonBody(request, 16 * 1024);
+  if (!bodyResult.success) {
+    return NextResponse.json(
+      { message: bodyResult.message },
+      { status: bodyResult.status },
+    );
+  }
+
+  const parsed = adminCreateUserSchema.safeParse(bodyResult.data);
 
   if (!parsed.success) {
     return NextResponse.json(
       {
-        message: "Data undangan tidak valid",
+        message: "Data pengguna tidak valid",
         errors: parsed.error.flatten().fieldErrors,
       },
       { status: 422 },
     );
   }
 
-  const origin = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
-  const { data, error } = await admin.auth.admin.inviteUserByEmail(
-    parsed.data.email,
-    {
-      data: { full_name: parsed.data.fullName },
-      redirectTo: `${origin}/auth/callback?next=/auth/reset-password`,
+  const { data: usernameExists, error: usernameError } = await admin
+    .from("profiles")
+    .select("id")
+    .eq("username", parsed.data.username)
+    .maybeSingle();
+
+  if (usernameError) {
+    return NextResponse.json(
+      { message: "Username tidak dapat diperiksa" },
+      { status: 500 },
+    );
+  }
+
+  if (usernameExists) {
+    return NextResponse.json(
+      { message: "Username sudah digunakan" },
+      { status: 409 },
+    );
+  }
+
+  // Supabase Auth tetap digunakan sebagai mesin session/JWT/RLS. Email ini hanya
+  // identifier internal Auth dan tidak pernah ditampilkan atau digunakan untuk email.
+  const internalAuthEmail = `auth-${randomUUID()}@example.com`;
+  const { data, error } = await admin.auth.admin.createUser({
+    email: internalAuthEmail,
+    password: parsed.data.password,
+    email_confirm: true,
+    user_metadata: {
+      full_name: parsed.data.fullName,
+      username: parsed.data.username,
+      auth_mode: "username_password",
     },
-  );
+  });
 
   if (error || !data.user) {
     return NextResponse.json(
-      { message: "Undangan tidak dapat dikirim. Pastikan email belum terdaftar." },
+      { message: "Akun tidak dapat dibuat. Periksa username dan kata sandi." },
       { status: 409 },
     );
   }
 
   const profileResult = await admin.from("profiles").upsert({
     id: data.user.id,
+    username: parsed.data.username,
     full_name: parsed.data.fullName,
     status: "active",
   });
@@ -193,7 +228,7 @@ export async function POST(request: Request) {
   if (profileResult.error) {
     await admin.auth.admin.deleteUser(data.user.id);
     return NextResponse.json(
-      { message: "Profil admin tidak dapat dibuat; undangan dibatalkan." },
+      { message: "Profil admin tidak dapat dibuat; akun dibatalkan." },
       { status: 500 },
     );
   }
@@ -209,30 +244,36 @@ export async function POST(request: Request) {
   if (roleResult.error) {
     await admin.auth.admin.deleteUser(data.user.id);
     return NextResponse.json(
-      { message: "Role pengguna tidak dapat disimpan; undangan dibatalkan." },
+      { message: "Role pengguna tidak dapat disimpan; akun dibatalkan." },
       { status: 500 },
     );
   }
 
   await recordSecurityAudit({
     actorId: auth.user.id,
-    action: "admin_invited",
+    action: "admin_user_created",
     entityType: "profiles",
     entityId: data.user.id,
-    details: { role: parsed.data.role },
+    details: {
+      username: parsed.data.username,
+      role: parsed.data.role,
+      ministryAssigned: parsed.data.role === "department_admin",
+    },
   });
 
   return NextResponse.json(
     {
       data: {
         id: data.user.id,
-        email: parsed.data.email,
+        username: parsed.data.username,
         fullName: parsed.data.fullName,
         role: parsed.data.role,
+        roleName: getAdminRoleLabel(parsed.data.role),
         ministryId:
-          parsed.data.role === "department_admin" ? parsed.data.ministryId : null,
+          parsed.data.role === "department_admin"
+            ? parsed.data.ministryId
+            : null,
         status: "active",
-        invitedAt: data.user.invited_at ?? new Date().toISOString(),
         lastSignInAt: null,
         createdAt: data.user.created_at,
         isCurrentUser: false,

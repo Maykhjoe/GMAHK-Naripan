@@ -54,7 +54,6 @@ const iconMap: Record<string, LucideIcon> = {
   "/admin/pesan": MessageSquare,
   "/admin/file": FileText,
   "/admin/pengguna": Users,
-  "/admin/tampilan": Settings,
   "/admin/pengaturan": Settings,
   "/admin/audit-log": ScrollText,
   "/admin/keamanan": ShieldCheck,

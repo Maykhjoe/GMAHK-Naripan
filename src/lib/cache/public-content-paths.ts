@@ -7,7 +7,6 @@ const PUBLIC_SECTION_PATHS: Record<string, readonly string[]> = {
   pengurus: ["/tentang"],
   galeri: ["/", "/galeri"],
   jadwal: ["/", "/jadwal-ibadah"],
-  tampilan: ["/"],
   pengaturan: [
     "/",
     "/tentang",

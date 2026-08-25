@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   contactSchema,
   eventRegistrationSchema,
-  passwordResetSchema,
+  loginSchema,
   prayerRequestSchema,
   visitorSchema,
 } from "./forms";
@@ -89,25 +89,19 @@ describe("validasi formulir publik", () => {
     ).toBe(false);
   });
 
-  it("mewajibkan kata sandi kuat dan konfirmasi yang sama", () => {
+  it("memvalidasi kredensial login username", () => {
     expect(
-      passwordResetSchema.safeParse({
-        password: "lemah123",
-        confirmation: "lemah123",
-      }).success,
-    ).toBe(false);
-    expect(
-      passwordResetSchema.safeParse({
-        password: "Kuat1234",
-        confirmation: "Berbeda123",
-      }).success,
-    ).toBe(false);
-    expect(
-      passwordResetSchema.safeParse({
-        password: "Kuat1234",
-        confirmation: "Kuat1234",
+      loginSchema.safeParse({
+        username: "admin.naripan",
+        password: "PasswordApaPun",
       }).success,
     ).toBe(true);
+    expect(
+      loginSchema.safeParse({
+        username: "a",
+        password: "PasswordApaPun",
+      }).success,
+    ).toBe(false);
   });
 
   it("mewajibkan kontak dan persetujuan pada registrasi kegiatan", () => {

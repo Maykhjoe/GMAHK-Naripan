@@ -16,7 +16,7 @@ export type ResourceCapabilities = {
   scope: "all" | "owner" | "ministry";
 };
 
-const superAdminOnlySections = new Set(["tampilan", "pengaturan"]);
+const superAdminOnlySections = new Set(["pengaturan"]);
 
 export function getResourceScope(
   section: string,

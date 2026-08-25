@@ -13,6 +13,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 type CurrentProfile = {
   id: string;
+  username: string;
   full_name: string | null;
   status: "active" | "inactive";
   user_roles: {
@@ -109,7 +110,7 @@ export async function PATCH(
 
   const { data: currentData, error: currentError } = await admin
     .from("profiles")
-    .select("id,full_name,status,user_roles(ministry_id,roles(code))")
+    .select("id,username,full_name,status,user_roles(ministry_id,roles(code))")
     .eq("id", id)
     .maybeSingle();
 
@@ -135,36 +136,74 @@ export async function PATCH(
     );
   }
 
+  if (parsed.data.username && parsed.data.username !== current.username) {
+    const { data: duplicate, error: duplicateError } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("username", parsed.data.username)
+      .neq("id", id)
+      .maybeSingle();
+
+    if (duplicateError) {
+      return NextResponse.json(
+        { message: "Username tidak dapat diperiksa" },
+        { status: 500 },
+      );
+    }
+
+    if (duplicate) {
+      return NextResponse.json(
+        { message: "Username sudah digunakan" },
+        { status: 409 },
+      );
+    }
+  }
+
   const assignmentChanged = Boolean(
     requestedRole &&
       (requestedRole !== oldAssignment.role ||
         requestedMinistryId !== oldAssignment.ministryId),
   );
 
+  const profileChanges: Record<string, string | null> = {};
   if (parsed.data.fullName && parsed.data.fullName !== current.full_name) {
-    const { error: profileNameError } = await admin
+    profileChanges.full_name = parsed.data.fullName;
+  }
+  if (parsed.data.username && parsed.data.username !== current.username) {
+    profileChanges.username = parsed.data.username;
+  }
+
+  if (Object.keys(profileChanges).length > 0) {
+    const { error: profileError } = await admin
       .from("profiles")
-      .update({ full_name: parsed.data.fullName })
+      .update(profileChanges)
       .eq("id", id);
 
-    if (profileNameError) {
+    if (profileError) {
       return NextResponse.json(
-        { message: "Nama pengguna tidak dapat diperbarui" },
+        { message: "Identitas pengguna tidak dapat diperbarui" },
         { status: 500 },
       );
     }
 
     const { error: metadataError } = await admin.auth.admin.updateUserById(id, {
-      user_metadata: { full_name: parsed.data.fullName },
+      user_metadata: {
+        full_name: parsed.data.fullName ?? current.full_name,
+        username: parsed.data.username ?? current.username,
+        auth_mode: "username_password",
+      },
     });
 
     if (metadataError) {
       await admin
         .from("profiles")
-        .update({ full_name: current.full_name })
+        .update({
+          full_name: current.full_name,
+          username: current.username,
+        })
         .eq("id", id);
       return NextResponse.json(
-        { message: "Metadata nama pengguna tidak dapat diperbarui" },
+        { message: "Metadata pengguna tidak dapat diperbarui" },
         { status: 500 },
       );
     }
@@ -249,6 +288,9 @@ export async function PATCH(
     details: {
       nameChanged: Boolean(
         parsed.data.fullName && parsed.data.fullName !== current.full_name,
+      ),
+      usernameChanged: Boolean(
+        parsed.data.username && parsed.data.username !== current.username,
       ),
       roleChanged: requestedRole !== oldAssignment.role,
       departmentAssignmentChanged:

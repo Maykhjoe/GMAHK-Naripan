@@ -171,7 +171,7 @@ export const adminMenu = [
     permission: "messages.read",
   },
   {
-    label: "File & Download",
+    label: "Media & Dokumen",
     href: "/admin/file",
     permission: "files.manage",
   },
@@ -179,11 +179,6 @@ export const adminMenu = [
     label: "Pengguna",
     href: "/admin/pengguna",
     permission: "users.manage",
-  },
-  {
-    label: "Tampilan Website",
-    href: "/admin/tampilan",
-    permission: "appearance.manage",
   },
   {
     label: "Audit Log",

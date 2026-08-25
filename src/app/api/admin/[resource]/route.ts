@@ -27,7 +27,6 @@ import {
 
 const createdByTables = new Set([
   "site_settings",
-  "navigation_items",
   "service_schedules",
   "events",
   "sermons",

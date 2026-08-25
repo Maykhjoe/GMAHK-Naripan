@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { Eye, EyeOff, Loader2, LockKeyhole } from "lucide-react";
@@ -28,7 +27,7 @@ export default function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: String(form.get("email") ?? ""),
+          username: String(form.get("username") ?? ""),
           password: String(form.get("password") ?? ""),
         }),
       });
@@ -59,36 +58,72 @@ export default function LoginPage() {
         </div>
         <p className="text-xs text-white/60">GMAHK Naripan · Admin Portal</p>
       </section>
+
       <section className="grid place-items-center p-6">
         <div className="w-full max-w-md">
-          <div className="lg:hidden"><Logo /></div>
+          <div className="lg:hidden">
+            <Logo />
+          </div>
+
           <LockKeyhole className="mt-10 size-9 text-gold lg:mt-0" />
           <h1 className="mt-5 font-serif text-4xl text-primary">Masuk ke Admin</h1>
           <p className="mt-3 text-sm text-muted">
-            Gunakan akun admin Supabase yang telah diotorisasi.
+            Masuk menggunakan username dan kata sandi yang diberikan Super Admin.
           </p>
+
           <form onSubmit={submit} className="mt-8 space-y-5">
             <label className="block text-sm font-semibold">
-              Email
-              <Input className="mt-2" name="email" type="email" required autoComplete="email" />
+              Username
+              <Input
+                className="mt-2"
+                name="username"
+                type="text"
+                required
+                minLength={3}
+                maxLength={32}
+                autoCapitalize="none"
+                autoCorrect="off"
+                autoComplete="username"
+              />
             </label>
+
             <label className="block text-sm font-semibold">
               Kata sandi
               <span className="relative mt-2 block">
-                <Input className="pr-12" name="password" type={show ? "text" : "password"} required minLength={8} autoComplete="current-password" />
-                <button type="button" onClick={() => setShow(!show)} className="absolute right-1 top-1 grid size-10 place-items-center rounded-lg text-muted hover:bg-cream" aria-label="Tampilkan kata sandi">
+                <Input
+                  className="pr-12"
+                  name="password"
+                  type={show ? "text" : "password"}
+                  required
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShow(!show)}
+                  className="absolute right-1 top-1 grid size-10 place-items-center rounded-lg text-muted hover:bg-cream"
+                  aria-label={show ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+                >
                   {show ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
                 </button>
               </span>
             </label>
-            <div className="text-right">
-              <Link href="/auth/forgot-password" className="text-xs font-semibold text-secondary underline decoration-gold underline-offset-4">Lupa kata sandi?</Link>
-            </div>
-            {error && <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700" role="alert">{error}</p>}
+
+            <p className="text-xs leading-5 text-muted">
+              Lupa kata sandi? Hubungi Super Admin untuk melakukan reset akun.
+            </p>
+
+            {error && (
+              <p className="rounded-xl bg-red-50 p-3 text-sm text-red-700" role="alert">
+                {error}
+              </p>
+            )}
+
             <Button type="submit" className="w-full" size="lg" disabled={loading}>
-              {loading && <Loader2 className="size-4 animate-spin" />}Masuk
+              {loading && <Loader2 className="size-4 animate-spin" />}
+              Masuk
             </Button>
           </form>
+
           {!process.env.NEXT_PUBLIC_SUPABASE_URL && (
             <p className="mt-6 rounded-xl bg-gold/10 p-4 text-xs leading-5 text-muted">
               Mode pengembangan: Supabase belum dikonfigurasi. Route admin dapat dipreview tanpa login.

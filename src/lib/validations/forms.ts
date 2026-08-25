@@ -99,28 +99,13 @@ export const eventRegistrationSchema = z
   });
 
 export const loginSchema = z.object({
-  email: z.email("Alamat email tidak valid"),
-  password: z.string().min(8, "Kata sandi minimal 8 karakter"),
+  username: z
+    .string()
+    .trim()
+    .min(3, "Username minimal 3 karakter")
+    .max(32, "Username maksimal 32 karakter"),
+  password: z.string().min(1, "Kata sandi wajib diisi").max(128),
 });
-
-export const passwordResetRequestSchema = z.object({
-  email: z.email("Alamat email tidak valid"),
-});
-
-export const passwordResetSchema = z
-  .object({
-    password: z
-      .string()
-      .min(8, "Kata sandi minimal 8 karakter")
-      .regex(/[a-z]/, "Gunakan huruf kecil")
-      .regex(/[A-Z]/, "Gunakan huruf besar")
-      .regex(/[0-9]/, "Gunakan angka"),
-    confirmation: z.string(),
-  })
-  .refine((value) => value.password === value.confirmation, {
-    path: ["confirmation"],
-    message: "Konfirmasi kata sandi tidak sama",
-  });
 
 export type PrayerRequestInput = z.infer<typeof prayerRequestSchema>;
 export type VisitorInput = z.infer<typeof visitorSchema>;

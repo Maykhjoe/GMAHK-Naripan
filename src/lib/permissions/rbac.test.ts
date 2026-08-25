@@ -65,6 +65,12 @@ describe("RBAC", () => {
     expect(canAccess("editor", "prayers.inbox.read")).toBe(false);
   });
 
+  it("tidak lagi menampilkan modul Tampilan Website yang sudah legacy", () => {
+    const menus = getAllowedAdminMenu("super_admin");
+    expect(menus.some((menu) => menu.href === "/admin/tampilan")).toBe(false);
+    expect(menus.some((menu) => menu.label === "Media & Dokumen")).toBe(true);
+  });
+
   it("menampilkan menu monitoring untuk Super Admin tanpa menu doa", () => {
     const menus = getAllowedAdminMenu("super_admin");
     expect(menus.some((menu) => menu.href === "/admin/monitoring")).toBe(true);

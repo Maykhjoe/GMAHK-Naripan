@@ -14,34 +14,27 @@ if (!serviceRoleKey) {
 }
 
 if (!userId) {
-  throw new Error("User ID Super Admin belum diberikan.");
+  throw new Error("User ID belum diberikan.");
 }
 
 if (!newPassword || newPassword.length < 12) {
   throw new Error("Password baru minimal 12 karakter.");
 }
 
-const supabase = createClient(
-  supabaseUrl,
-  serviceRoleKey,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
+const supabase = createClient(supabaseUrl, serviceRoleKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
   },
-);
+});
 
-const { data, error } = await supabase.auth.admin.updateUserById(
-  userId,
-  {
-    password: newPassword,
-  },
-);
+const { data, error } = await supabase.auth.admin.updateUserById(userId, {
+  password: newPassword,
+});
 
 if (error) {
   console.error("Gagal reset password:", error.message);
   process.exit(1);
 }
 
-console.log(`Password berhasil direset untuk: ${data.user.email}`);
+console.log("Password berhasil direset untuk:", data.user.email);
